@@ -1,0 +1,15 @@
+[package]
+name = "nb-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.53", features = ["derive"] }
+colored = "3.0.0"
+itertools = "0.14.0"
+resolve-path = "0.1.0"
+thiserror = "2.0.17"
+tracing = "0.1.43"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+xdg = "3.0.0"
