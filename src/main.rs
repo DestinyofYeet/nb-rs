@@ -54,8 +54,6 @@ fn main() -> Result<()> {
         )
     }
 
-    dbg!(&config);
-
     match args.action {
         args::actions::ActionArgs::Create { folder, note } => {
             if let Some(folder) = folder {

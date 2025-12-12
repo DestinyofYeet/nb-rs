@@ -35,4 +35,10 @@ pub enum ActionArgs {
         #[arg(group = "remove", short = 'n', help = "The note to remove")]
         note: Option<String>,
     },
+
+    #[command(about = "Query notes", visible_aliases=["q", "s", "query"])]
+    Search {
+        #[arg(help = "The note to search for")]
+        note: Option<String>,
+    },
 }
