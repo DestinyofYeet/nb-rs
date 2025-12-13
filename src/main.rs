@@ -80,7 +80,7 @@ fn main() -> Result<()> {
                         let folder = Folder::from_pathbuf(&config.data_dir, ".")?;
                         let notes = folder.get_notes_by_name(&note_string.to_lowercase())?;
                         match notes.len() {
-                            1 => notes.get(0).unwrap(),
+                            1 => notes.first().unwrap(),
 
                             _ => {
                                 let string = notes
@@ -154,7 +154,7 @@ fn main() -> Result<()> {
             folder,
         } => {
             let term = term.to_lowercase();
-            debug!("searching for content={term}, folder={folder}");
+            debug!("searching for term={term}, folder={folder}");
             let folder = Folder::from_pathbuf(&config.data_dir, folder)?;
             let found_notes = folder.search_notes_content(&term)?;
 
@@ -164,7 +164,7 @@ fn main() -> Result<()> {
                 }
                 false => {
                     println!(
-                        "Found '{term}' in the following notes:\n{}",
+                        "Found '{term}' in the following notes:\n\n{}",
                         found_notes
                             .into_iter()
                             .map(|result| format!(
@@ -176,9 +176,23 @@ fn main() -> Result<()> {
                                     .map(|snippet| snippet.to_string())
                                     .join("\n  -----\n")
                             ))
-                            .join("\n")
+                            .join("\n\n")
                     )
                 }
+            }
+        }
+        args::actions::ActionArgs::Sync { setup, folder } => {
+            let folder = Folder::from_pathbuf(&config.data_dir, folder)?;
+            match setup {
+                None => {
+                    // just run sync
+                    folder.sync_manual()?;
+                }
+                Some(setup) => match setup {
+                    args::sync::actions::SetupSyncArgs::Setup { repo, branch } => {
+                        folder.sync_setup(&repo, &branch)?;
+                    }
+                },
             }
         }
     }

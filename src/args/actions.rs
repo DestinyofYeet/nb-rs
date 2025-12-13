@@ -1,8 +1,10 @@
 use clap::Subcommand;
 
+use crate::args::sync::actions::SetupSyncArgs;
+
 #[derive(Subcommand, Debug)]
 pub enum ActionArgs {
-    #[command(about = "Create a folder or a note")]
+    #[command(about = "Create a folder or a note", visible_aliases=["c"])]
     Create {
         #[arg(group = "create", short = 'f', help = "The folder to create")]
         folder: Option<String>,
@@ -47,5 +49,18 @@ pub enum ActionArgs {
 
         #[arg(help = "The content to search for")]
         content: String,
+    },
+
+    #[command(about = "Settings for git sync")]
+    Sync {
+        #[arg(
+            help = "Optionally provide a specific folder",
+            short = 'f',
+            default_value = "."
+        )]
+        folder: String,
+
+        #[command(subcommand)]
+        setup: Option<SetupSyncArgs>,
     },
 }

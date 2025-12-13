@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use colored::Colorize;
 use itertools::Itertools;
@@ -6,7 +6,7 @@ use thiserror::Error;
 use tracing::debug;
 
 use crate::actions::{
-    folder::model::Folder,
+    folder::model::{Folder, FolderError},
     note::model::{Note, NoteError},
 };
 
@@ -17,6 +17,9 @@ pub enum ListFolderError {
 
     #[error(transparent)]
     NoteError(#[from] NoteError),
+
+    #[error(transparent)]
+    Folder(#[from] FolderError),
 }
 
 #[derive(Default)]
@@ -62,18 +65,22 @@ impl Folder {
     pub fn list(&self) -> Result<FolderSearchResult, ListFolderError> {
         let path = self.get_path();
 
-        debug!("Iterating folder {}", path.to_str().unwrap());
+        debug!("Iterating folder {:?}", self);
 
         let mut folders: Vec<Folder> = Vec::new();
         let mut notes: Vec<Note> = Vec::new();
 
-        for entry in fs::read_dir(path)? {
+        for entry in fs::read_dir(path.clone())? {
             let entry = entry?;
             let entry_type = entry.file_type()?;
             let entry_name = entry.file_name();
 
             if entry_type.is_dir() {
-                let folder = Folder::new(&self.path, entry_name.to_str().unwrap());
+                let folder = Folder::from_pathbuf(&path, entry_name.to_str().unwrap())?;
+                if folder.name.starts_with(".") {
+                    continue;
+                }
+
                 folders.push(folder);
             } else if entry_type.is_file() {
                 let note = Note::new(

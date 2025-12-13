@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{self, BufRead, BufReader, Lines, Read},
+    io::{self, BufRead, BufReader, Lines},
     path::{Path, PathBuf},
 };
 
@@ -54,12 +54,30 @@ impl Note {
     }
 
     pub fn from_pathbuf(path: &Path, name: String) -> Result<Self, NoteError> {
-        let path = match path.to_str() {
-            None => return Err(NoteError::PathBufConversionError),
-            Some(value) => value.to_string(),
+        // let path = match path.to_str() {
+        //     None => return Err(NoteError::PathBufConversionError),
+        //     Some(value) => value.to_string(),
+        // };
+
+        let mut big_path = PathBuf::from(path);
+        big_path.push(name);
+
+        let file_name = match big_path
+            .file_name()
+            .map(|elem| elem.to_str().map(|elem| elem.to_string()))
+        {
+            Some(Some(some)) => some,
+            _ => return Err(NoteError::PathBufConversionError),
         };
 
-        Note::new(path, name)
+        big_path.pop();
+
+        let directory_path = match big_path.to_str().map(|elem| elem.to_string()) {
+            None => return Err(NoteError::PathBufConversionError),
+            Some(value) => value,
+        };
+
+        Note::new(directory_path, file_name)
     }
 
     #[inline(always)]

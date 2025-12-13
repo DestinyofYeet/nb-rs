@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use colored::Colorize;
 use thiserror::Error;
 

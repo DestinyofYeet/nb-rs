@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::fs;
 
 use thiserror::Error;
@@ -24,6 +25,8 @@ impl Folder {
 
         fs::create_dir(path.clone()).map_err(|e| FolderCreationError::Create(e.to_string()))?;
         debug!("Created directory '{}'", path.to_str().unwrap());
+
+        println!("Created folder '{}'", self.name.blue());
         Ok(())
     }
 }

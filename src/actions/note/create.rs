@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::fs;
 
 use thiserror::Error;
@@ -24,6 +25,8 @@ impl Note {
         fs::File::create_new(path.clone()).map_err(|e| NoteCreationError::Create(e.to_string()))?;
 
         debug!("Created note '{}'", path.to_str().unwrap());
+
+        println!("Created note '{}'", self.name.blue());
 
         Ok(())
     }
