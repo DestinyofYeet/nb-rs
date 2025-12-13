@@ -1,7 +1,9 @@
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use thiserror::Error;
 use tracing::debug;
+
+use crate::actions::note::model::Note;
 
 #[derive(Error, Debug)]
 pub enum NoteCreationError {
@@ -12,18 +14,17 @@ pub enum NoteCreationError {
     Create(String),
 }
 
-pub fn note_create(root_dir: &PathBuf, name: &String) -> Result<(), NoteCreationError> {
-    let mut path = PathBuf::new();
+impl Note {
+    pub(super) fn create(&self) -> Result<(), NoteCreationError> {
+        let path = self.get_path();
+        if path.exists() {
+            return Err(NoteCreationError::NoteExists(self.name.clone()));
+        }
 
-    path.push(root_dir);
-    path.push(name);
+        fs::File::create_new(path.clone()).map_err(|e| NoteCreationError::Create(e.to_string()))?;
 
-    if path.exists() {
-        return Err(NoteCreationError::NoteExists(name.clone()));
+        debug!("Created note '{}'", path.to_str().unwrap());
+
+        Ok(())
     }
-
-    fs::File::create_new(path.clone()).map_err(|e| NoteCreationError::Create(e.to_string()))?;
-
-    debug!("Created note '{}'", path.to_str().unwrap());
-    Ok(())
 }

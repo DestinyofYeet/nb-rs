@@ -1,7 +1,9 @@
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use thiserror::Error;
 use tracing::debug;
+
+use crate::actions::folder::model::Folder;
 
 #[derive(Error, Debug)]
 pub enum FolderCreationError {
@@ -12,17 +14,16 @@ pub enum FolderCreationError {
     Create(String),
 }
 
-pub fn folder_create(root_dir: &PathBuf, name: &String) -> Result<(), FolderCreationError> {
-    let mut path = PathBuf::new();
+impl Folder {
+    pub fn create(&self) -> Result<(), FolderCreationError> {
+        let path = self.get_path();
 
-    path.push(root_dir);
-    path.push(name);
+        if path.exists() {
+            return Err(FolderCreationError::FolderExists(self.name.clone()));
+        }
 
-    if path.exists() {
-        return Err(FolderCreationError::FolderExists(name.clone()));
+        fs::create_dir(path.clone()).map_err(|e| FolderCreationError::Create(e.to_string()))?;
+        debug!("Created directory '{}'", path.to_str().unwrap());
+        Ok(())
     }
-
-    fs::create_dir(path.clone()).map_err(|e| FolderCreationError::Create(e.to_string()))?;
-    debug!("Created directory '{}'", path.to_str().unwrap());
-    Ok(())
 }

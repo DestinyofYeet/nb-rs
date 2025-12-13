@@ -11,7 +11,7 @@ pub enum ActionArgs {
         note: Option<String>,
     },
 
-    #[command(about = "Open a note")]
+    #[command(about = "Open a note", visible_aliases=["e", "edit"])]
     Open {
         #[arg(help = "The note to open")]
         note: String,
@@ -36,9 +36,16 @@ pub enum ActionArgs {
         note: Option<String>,
     },
 
-    #[command(about = "Query notes", visible_aliases=["q", "s", "query"])]
+    #[command(about = "Query a string in notes", visible_aliases=["q", "s", "query"])]
     Search {
-        #[arg(help = "The note to search for")]
-        note: Option<String>,
+        #[arg(
+            help = "The folder to restrict the search to",
+            short = 'f',
+            default_value = "."
+        )]
+        folder: String,
+
+        #[arg(help = "The content to search for")]
+        content: String,
     },
 }

@@ -1,62 +1,89 @@
-use std::path::PathBuf;
+use std::fs;
 
 use colored::Colorize;
 use itertools::Itertools;
 use thiserror::Error;
 use tracing::debug;
 
+use crate::actions::{
+    folder::model::Folder,
+    note::model::{Note, NoteError},
+};
+
 #[derive(Error, Debug)]
 pub enum ListFolderError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    NoteError(#[from] NoteError),
 }
 
-pub fn folder_list(root: &PathBuf, folder: &String) -> Result<(), ListFolderError> {
-    let mut path = PathBuf::new();
-    path.push(root);
-    path.push(folder);
+#[derive(Default)]
+pub struct FolderSearchResult {
+    pub folders: Vec<Folder>,
+    pub notes: Vec<Note>,
+}
 
-    debug!("Searching for folders in {}", path.to_str().unwrap());
+impl FolderSearchResult {
+    pub fn print(&self) {
+        let folders_string = self
+            .folders
+            .iter()
+            .map(|folder| format!("- {}: {}", "D".green(), folder.name.blue()))
+            .join("\n");
+        let notes_string = self
+            .notes
+            .iter()
+            .map(|note| {
+                let name = {
+                    let mut name = String::new();
+                    if let Some(pretty) = note.get_pretty_name().unwrap() {
+                        name.push_str(&format!("{} | ", pretty.blue()));
+                    }
+                    name.push_str(&format!("{}", note.name.blue()));
 
-    let mut found_folders = Vec::new();
-    let mut found_notes = Vec::new();
-
-    for entry in std::fs::read_dir(path)? {
-        let entry = entry?;
-        let file_type = entry.file_type()?;
-
-        if file_type.is_dir() {
-            found_folders.push(entry)
-        } else if file_type.is_file() {
-            found_notes.push(entry)
-        }
-    }
-
-    if found_folders.is_empty() && found_notes.is_empty() {
-        println!("{}", "The folder is empty!".red());
-        return Ok(());
-    }
-
-    let mut entries = found_folders;
-
-    entries.append(&mut found_notes);
-
-    println!(
-        "Found {} entries!\n{}",
-        entries.len(),
-        entries
-            .into_iter()
-            .map(|elem| {
-                let file_type = elem.file_type().unwrap();
-
-                if file_type.is_dir() {
-                    format!("- D {}/", elem.file_name().to_str().unwrap().blue())
-                } else {
-                    format!("- F {}", elem.file_name().to_str().unwrap().blue())
-                }
+                    name
+                };
+                format!("- {}: {}", "F".green(), name)
             })
-            .join("\n")
-    );
+            .join("\n");
 
-    Ok(())
+        let entries = self.folders.len() + self.notes.len();
+
+        println!(
+            "Found {} entries!\n{}\n{}",
+            entries, folders_string, notes_string
+        );
+    }
+}
+
+impl Folder {
+    pub fn list(&self) -> Result<FolderSearchResult, ListFolderError> {
+        let path = self.get_path();
+
+        debug!("Iterating folder {}", path.to_str().unwrap());
+
+        let mut folders: Vec<Folder> = Vec::new();
+        let mut notes: Vec<Note> = Vec::new();
+
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let entry_type = entry.file_type()?;
+            let entry_name = entry.file_name();
+
+            if entry_type.is_dir() {
+                let folder = Folder::new(&self.path, entry_name.to_str().unwrap());
+                folders.push(folder);
+            } else if entry_type.is_file() {
+                let note = Note::new(
+                    self.get_path().to_str().unwrap(),
+                    entry_name.to_str().unwrap(),
+                )?;
+                notes.push(note);
+            }
+        }
+
+        Ok(FolderSearchResult { folders, notes })
+    }
 }
