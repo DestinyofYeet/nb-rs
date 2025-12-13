@@ -3,7 +3,10 @@ use std::io::Write;
 
 use thiserror::Error;
 
-use crate::actions::folder::{model::Folder, sync::setup::SetupSyncError};
+use crate::{
+    actions::folder::{model::Folder, sync::setup::SetupSyncError},
+    config::model::Config,
+};
 
 #[derive(Error, Debug)]
 pub enum SyncManualError {
@@ -20,8 +23,8 @@ pub enum SyncManualError {
 type Error = SyncManualError;
 
 impl Folder {
-    pub fn sync_manual(&self) -> Result<(), SyncManualError> {
-        if !self.sync_exists() {
+    pub fn sync_manual(&self, config: &Config) -> Result<(), SyncManualError> {
+        if !self.sync_exists(config) {
             return Err(Error::NoGitRepository);
         }
 

@@ -68,7 +68,7 @@ fn main() -> Result<()> {
 
             if let Some(note) = note {
                 let note = Note::new_create(config.data_dir.to_str().unwrap(), note)?;
-                note.open(&config.editor)?;
+                note.open(&config)?;
             }
         }
         args::actions::ActionArgs::Open { note: note_string } => {
@@ -131,7 +131,7 @@ fn main() -> Result<()> {
                 },
             };
 
-            note.open(&config.editor)?;
+            note.open(&config)?;
         }
         args::actions::ActionArgs::Ls { folder } => {
             let folder = Folder::from_pathbuf(&config.data_dir, folder)?;
@@ -141,7 +141,7 @@ fn main() -> Result<()> {
         args::actions::ActionArgs::Rm { folder, note } => {
             if let Some(note) = note {
                 let note = Note::from_pathbuf(&config.data_dir, note)?;
-                note.remove()?;
+                note.remove(&config)?;
             }
 
             if let Some(folder) = folder {
@@ -186,11 +186,11 @@ fn main() -> Result<()> {
             match setup {
                 None => {
                     // just run sync
-                    folder.sync_manual()?;
+                    folder.sync_manual(&config)?;
                 }
                 Some(setup) => match setup {
                     args::sync::actions::SetupSyncArgs::Setup { repo, branch } => {
-                        folder.sync_setup(&repo, &branch)?;
+                        folder.sync_setup(&config, &repo, &branch)?;
                     }
                 },
             }

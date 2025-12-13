@@ -1,15 +1,17 @@
 use std::path::PathBuf;
 
-use itertools::Itertools;
 use thiserror::Error;
 use tracing::debug;
 
-use crate::actions::{
-    folder::{
-        model::{Folder, FolderError},
-        sync::setup::SetupSyncError,
+use crate::{
+    actions::{
+        folder::{
+            model::{Folder, FolderError},
+            sync::setup::SetupSyncError,
+        },
+        note::model::Note,
     },
-    note::model::Note,
+    config::model::Config,
 };
 
 #[derive(Error, Debug)]
@@ -19,19 +21,30 @@ pub enum SyncError {
 
     #[error(transparent)]
     Folder(#[from] FolderError),
+
+    #[error("failed to find git folder. Reached root dir")]
+    GitNotFound,
 }
 
 type Error = SyncError;
 
 impl Folder {
-    pub fn sync_note(&self, note: &Note) -> Result<(), Error> {
+    pub fn sync_note(&self, note: &Note, config: &Config) -> Result<(), Error> {
+        if !self.sync_exists(config) {
+            return Ok(());
+        }
         let folder_path = self.get_path();
 
         let mut stripped_path = Vec::new();
 
         let mut git_root = folder_path;
 
+        let root_data_dir = PathBuf::from(&config.data_dir);
+
         loop {
+            if git_root == root_data_dir {
+                return Err(SyncError::GitNotFound);
+            }
             let mut tmp = git_root.clone();
             tmp.push(".git");
 
@@ -59,7 +72,7 @@ impl Folder {
         git_root_folder.sync_run_git_command(&[
             "commit",
             "-m",
-            &format!("[nb-rs] Changed {}", note.name),
+            &format!("[nb-rs] Edit: {}", note.name),
         ])?;
         git_root_folder.sync_run_git_command(&["push"])?;
         Ok(())

@@ -1,12 +1,15 @@
-use std::{fs::File, process::Command};
+use std::{fs::File, io::Write, process::Command};
 
 use colored::Colorize;
 use thiserror::Error;
 use tracing::debug;
 
-use crate::actions::{
-    folder::{model::Folder, sync::sync_note::SyncError},
-    note::model::Note,
+use crate::{
+    actions::{
+        folder::{model::Folder, sync::sync_note::SyncError},
+        note::model::Note,
+    },
+    config::model::Config,
 };
 
 #[derive(Error, Debug)]
@@ -22,14 +25,14 @@ pub enum OpenNoteError {
 }
 
 impl Note {
-    pub fn open(&self, editor: &String) -> Result<(), OpenNoteError> {
+    pub fn open(&self, config: &Config) -> Result<(), OpenNoteError> {
         let path = self.get_path();
 
         let file = File::open(&path)?;
         let modified = file.metadata()?.modified()?;
         drop(file);
 
-        let mut process = Command::new(editor);
+        let mut process = Command::new(&config.editor);
         process.arg(&path);
 
         debug!(
@@ -46,10 +49,13 @@ impl Note {
 
         if modified != new_modified {
             let folder = Folder::from_note(self);
-            if folder.sync_exists() {
-                folder.sync_note(self)?;
-            }
-            println!("Updated {}", format!("{}/{}", self.path, self.name).blue());
+            print!(
+                "Updating {}... ",
+                format!("{}/{}", self.path, self.name).blue()
+            );
+            std::io::stdout().flush()?;
+            folder.sync_note(self, config)?;
+            println!("{}", "Done".green());
         }
 
         Ok(())

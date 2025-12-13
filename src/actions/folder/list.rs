@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use colored::Colorize;
 use itertools::Itertools;

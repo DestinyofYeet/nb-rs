@@ -3,7 +3,13 @@ use std::io::Write;
 use colored::Colorize;
 use thiserror::Error;
 
-use crate::actions::note::model::Note;
+use crate::{
+    actions::{
+        folder::{model::Folder, sync::sync_note::SyncError},
+        note::model::Note,
+    },
+    config::model::Config,
+};
 
 #[derive(Error, Debug)]
 pub enum RemoveNoteError {
@@ -12,10 +18,13 @@ pub enum RemoveNoteError {
 
     #[error("the note {0} does not exist!")]
     NoteDoesNotExist(String),
+
+    #[error(transparent)]
+    Sync(#[from] SyncError),
 }
 
 impl Note {
-    pub fn remove(&self) -> Result<(), RemoveNoteError> {
+    pub fn remove(&self, config: &Config) -> Result<(), RemoveNoteError> {
         let path = self.get_path();
 
         if !path.exists() {
@@ -41,6 +50,9 @@ impl Note {
         }
 
         std::fs::remove_file(path)?;
+
+        let folder = Folder::from_note(self);
+        folder.sync_note(self, config)?;
 
         println!("Removed {}", self.name.blue());
 

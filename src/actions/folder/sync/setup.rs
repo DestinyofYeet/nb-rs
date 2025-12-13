@@ -3,10 +3,11 @@ use std::{
     process::{Command, ExitStatus, Stdio},
 };
 
+use itertools::Itertools;
 use thiserror::Error;
 use tracing::debug;
 
-use crate::actions::folder::model::Folder;
+use crate::{actions::folder::model::Folder, config::model::Config};
 
 #[derive(Error, Debug)]
 pub enum SetupSyncError {
@@ -23,25 +24,20 @@ pub enum SetupSyncError {
 type Error = SetupSyncError;
 
 impl Folder {
-    pub fn sync_exists(&self) -> bool {
-        self.sync_exists_file() || self.sync_exists_ask_git().unwrap()
-    }
-
-    pub fn sync_exists_file(&self) -> bool {
+    pub fn sync_exists(&self, config: &Config) -> bool {
         let mut path = self.get_path();
-        path.push(".git");
+        while path != config.data_dir {
+            let mut tmp = path.clone();
+            tmp.push(".git");
+            if tmp.exists() {
+                return true;
+            }
 
-        path.exists()
+            path.pop();
+        }
+
+        false
     }
-
-    fn sync_exists_ask_git(&self) -> Result<bool, Error> {
-        Ok(self
-            .sync_run_git_command_conf(&["status"], true)?
-            .code()
-            .unwrap()
-            != 128)
-    }
-
     pub fn sync_run_git_command(&self, args: &[&str]) -> Result<ExitStatus, Error> {
         self.sync_run_git_command_conf(args, false)
     }
@@ -77,7 +73,15 @@ impl Folder {
 
         debug!(
             "Ran 'git {}'\nStdout:{}\nStderr:{}\n",
-            args.join(" "),
+            args.iter()
+                .map(|arg| {
+                    if arg.contains(" ") {
+                        format!("\"{}\"", arg)
+                    } else {
+                        arg.to_string()
+                    }
+                })
+                .join(" "),
             stdout,
             stderr
         );
@@ -85,8 +89,8 @@ impl Folder {
         Ok(status)
     }
 
-    pub fn sync_setup(&self, repo: &str, branch: &str) -> Result<(), Error> {
-        if self.sync_exists() {
+    pub fn sync_setup(&self, config: &Config, repo: &str, branch: &str) -> Result<(), Error> {
+        if self.sync_exists(config) {
             return Err(Error::SyncExists);
         }
 
