@@ -29,9 +29,10 @@ pub struct Note {
 
 impl Note {
     pub fn new(path: impl ToString, name: impl ToString) -> Result<Self, NoteError> {
+        let (path, name) = Note::normalize_name(path.to_string(), name.to_string())?;
         let note = Note {
-            path: path.to_string(),
-            name: name.to_string(),
+            path,
+            name: name.clone(),
         };
 
         if !note.exists() || !note.get_path().is_file() {
@@ -43,6 +44,7 @@ impl Note {
     }
 
     pub fn new_create(path: impl ToString, name: impl ToString) -> Result<Self, NoteCreationError> {
+        let (path, name) = Note::normalize_name(path.to_string(), name.to_string())?;
         let note = Note {
             path: path.to_string(),
             name: name.to_string(),
@@ -53,12 +55,7 @@ impl Note {
         Ok(note)
     }
 
-    pub fn from_pathbuf(path: &Path, name: String) -> Result<Self, NoteError> {
-        // let path = match path.to_str() {
-        //     None => return Err(NoteError::PathBufConversionError),
-        //     Some(value) => value.to_string(),
-        // };
-
+    fn normalize_name(path: String, name: String) -> Result<(String, String), NoteError> {
         let mut big_path = PathBuf::from(path);
         big_path.push(name);
 
@@ -77,7 +74,16 @@ impl Note {
             Some(value) => value,
         };
 
-        Note::new(directory_path, file_name)
+        Ok((directory_path, file_name))
+    }
+
+    pub fn from_pathbuf(path: &Path, name: String) -> Result<Self, NoteError> {
+        let path = match path.to_str() {
+            None => return Err(NoteError::PathBufConversionError),
+            Some(value) => value.to_string(),
+        };
+
+        Note::new(path, name)
     }
 
     #[inline(always)]

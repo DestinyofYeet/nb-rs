@@ -4,7 +4,7 @@ use std::fs;
 use thiserror::Error;
 use tracing::debug;
 
-use crate::actions::note::model::Note;
+use crate::actions::note::model::{Note, NoteError};
 
 #[derive(Error, Debug)]
 pub enum NoteCreationError {
@@ -13,6 +13,9 @@ pub enum NoteCreationError {
 
     #[error("failed to create note: {0}")]
     Create(String),
+
+    #[error(transparent)]
+    Note(#[from] NoteError),
 }
 
 impl Note {
