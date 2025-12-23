@@ -14,7 +14,7 @@ pub enum SetupSyncError {
     #[error("sync is already configured!")]
     SyncExists,
 
-    #[error("failed to run git command '{}': {}", .command, .err)]
+    #[error("failed to run git command '{}':\n{}", .command, .err)]
     Git { command: String, err: String },
 
     #[error(transparent)]

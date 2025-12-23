@@ -76,10 +76,11 @@ fn main() -> Result<()> {
             let note = match note {
                 Ok(note) => note,
                 Err(e) => match e {
-                    NoteError::NoteDoesNotExist(_) => {
+                    NoteError::NoteDoesNotExist(non_existant_note) => {
                         let folder = Folder::from_pathbuf(&config.data_dir, ".")?;
                         let notes = folder.get_notes_by_name(&note_string.to_lowercase())?;
                         match notes.len() {
+                            0 => return Err(NoteError::NoteDoesNotExist(non_existant_note).into()),
                             1 => notes.first().unwrap(),
 
                             _ => {

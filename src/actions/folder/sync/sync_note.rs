@@ -69,11 +69,10 @@ impl Folder {
 
         debug!("Syncing {}", note_name);
         git_root_folder.sync_run_git_command(&["add", &note_name])?;
-        git_root_folder.sync_run_git_command(&[
-            "commit",
-            "-m",
-            &format!("[nb-rs] Edit: {}", note.name),
-        ])?;
+        git_root_folder.sync_run_git_command_conf(
+            &["commit", "-m", &format!("[nb-rs] Edit: {}", note.name)],
+            true,
+        )?;
         git_root_folder.sync_run_git_command(&["push"])?;
         Ok(())
     }

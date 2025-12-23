@@ -17,8 +17,12 @@ pub enum OpenNoteError {
     #[error("failed to run editor command: {0}")]
     FailedToRun(String),
 
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
+    #[error(": {0}")]
+    Io(
+        #[source]
+        #[from]
+        std::io::Error,
+    ),
 
     #[error(transparent)]
     GitFailure(#[from] SyncError),
@@ -29,7 +33,7 @@ impl Note {
         let path = self.get_path();
 
         let file = File::open(&path)?;
-        let modified = file.metadata()?.modified()?;
+        let old_modified = file.metadata()?.modified()?;
         drop(file);
 
         let mut process = Command::new(&config.editor);
@@ -47,7 +51,7 @@ impl Note {
         let file = File::open(&path)?;
         let new_modified = file.metadata()?.modified()?;
 
-        if modified != new_modified {
+        if old_modified != new_modified {
             let folder = Folder::from_note(self);
             print!(
                 "Updating {}... ",
