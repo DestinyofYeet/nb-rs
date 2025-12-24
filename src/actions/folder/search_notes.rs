@@ -13,16 +13,6 @@ pub enum SearchNotesError {
 
     #[error(transparent)]
     ReadError(#[from] NoteError),
-
-    #[error("failed to convert '{}' to a number: {}", .input, .err)]
-    Convert { input: String, err: String },
-
-    #[error("{} is an invalid index. Must be between {} and {}", .input, .min, .max)]
-    Index {
-        input: usize,
-        min: usize,
-        max: usize,
-    },
 }
 
 pub struct SearchNoteResult {

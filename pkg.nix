@@ -6,7 +6,7 @@ rustPlatform.buildRustPackage {
 
   src = ./.;
 
-  cargoHash = "sha256-Dxoi4Hw1i5rioKkQwF2Vw2VAIel8L3OokmPu37wXZu0=";
+  cargoHash = "sha256-+nuyXr4XncXG9hYzs2rgg5pO9IKNMtqAj9N1bHto+6o=";
 
   meta = with lib; {
     description = "nb-rs";

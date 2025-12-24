@@ -1,7 +1,8 @@
 use colored::Colorize;
+use fuzzy_select::FuzzySelect;
 use std::{
+    collections::HashMap,
     fs::{self},
-    io::{self, Write},
 };
 
 use anyhow::Result;
@@ -12,7 +13,7 @@ use tracing_subscriber::EnvFilter;
 
 use crate::{
     actions::{
-        folder::{model::Folder, search_notes::SearchNotesError},
+        folder::model::Folder,
         note::model::{Note, NoteError},
     },
     args::top::Args,
@@ -81,51 +82,31 @@ fn main() -> Result<()> {
                         let notes = folder.get_notes_by_name(&note_string.to_lowercase())?;
                         match notes.len() {
                             0 => return Err(NoteError::NoteDoesNotExist(non_existant_note).into()),
-                            1 => notes.first().unwrap(),
+                            1 => notes.first().unwrap().clone(),
 
                             _ => {
-                                let string = notes
-                                    .iter()
-                                    .zip(1..usize::MAX)
-                                    .map(|(note, index)| {
-                                        format!(
-                                            "{}) {}",
-                                            index.to_string().green(),
-                                            note.get_name().unwrap().blue()
-                                        )
-                                    })
-                                    .join("\n");
-                                print!("Please pick a note to edit!\n{}\nInput: ", string);
-                                io::stdout().flush()?;
+                                let mut map = HashMap::<String, Note>::new();
+                                let mut options = Vec::new();
 
-                                let mut input = String::new();
-
-                                std::io::stdin().read_line(&mut input)?;
-
-                                let index = match input.trim().parse::<usize>() {
-                                    Ok(index) => index,
-                                    Err(e) => {
-                                        return Err(SearchNotesError::Convert {
-                                            input,
-                                            err: e.to_string(),
-                                        }
-                                        .into());
-                                    }
-                                };
-
-                                if index == 0 || index > notes.len() {
-                                    return Err(SearchNotesError::Index {
-                                        input: index,
-                                        min: 1,
-                                        max: notes.len(),
-                                    }
-                                    .into());
+                                for note in notes {
+                                    let name = note.get_name()?;
+                                    options.push(name.clone());
+                                    map.insert(name, note);
                                 }
 
-                                notes.get(index - 1).unwrap()
+                                let selected = FuzzySelect::new()
+                                    .with_prompt("Select a note:")
+                                    .with_options(options)
+                                    .select()?;
+
+                                match map.remove(&selected) {
+                                    None => {
+                                        return Err(NoteError::NoteDoesNotExist(selected).into());
+                                    }
+                                    Some(value) => value,
+                                }
                             }
                         }
-                        .clone()
                     }
 
                     _ => return Err(e.into()),
