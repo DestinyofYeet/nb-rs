@@ -53,7 +53,7 @@ impl Note {
 
         if old_modified != new_modified {
             let folder = Folder::from_note(self);
-            std::io::stdout().flush()?;
+            println!();
             print!(
                 "Updating {}... ",
                 format!("{}/{}", self.path, self.name).blue()
