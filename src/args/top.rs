@@ -19,4 +19,7 @@ pub struct Args {
 
     #[command(subcommand)]
     pub action: ActionArgs,
+
+    #[arg(long = "version", help = "Shows the version and exits")]
+    pub version: bool,
 }

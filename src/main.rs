@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches, error::ErrorKind};
 use itertools::Itertools;
 use tracing::{debug, error};
 use tracing_subscriber::EnvFilter;
@@ -24,8 +24,24 @@ mod actions;
 mod args;
 mod config;
 
+pub static GIT_REV: &str = env!("GIT_REV");
+
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let arg_matches = match Args::command().try_get_matches() {
+        Ok(value) => value,
+        Err(e) => {
+            if e.kind() == ErrorKind::MissingSubcommand
+                && std::env::args().any(|a| a == "--version")
+            {
+                println!("Compiled at {}", GIT_REV.blue());
+                return Ok(());
+            }
+
+            e.exit();
+        }
+    };
+    let args = Args::from_arg_matches(&arg_matches).unwrap();
+
     let level = match args.verbose {
         0 => "error",
         1 => "info",
@@ -60,6 +76,17 @@ fn main() -> Result<()> {
         )
     }
 
+    // let action = match args.action {
+    //     Some(value) => value,
+    //     None => {
+    //         println!("{}", "A command is required!".red());
+    //         let mut cmd = Args::command();
+    //         cmd.print_help().unwrap();
+    //         println!();
+    //         exit(1);
+    //     }
+    // };
+
     match args.action {
         args::actions::ActionArgs::Create { folder, note } => {
             if let Some(folder) = folder {
@@ -81,7 +108,9 @@ fn main() -> Result<()> {
                         let folder = Folder::from_pathbuf(&config.data_dir, ".")?;
                         let notes = folder.get_notes_by_name(&note_string.to_lowercase())?;
                         match notes.len() {
-                            0 => return Err(NoteError::NoteDoesNotExist(non_existant_note).into()),
+                            0 => {
+                                return Err(NoteError::NoteDoesNotExist(non_existant_note).into());
+                            }
                             1 => notes.first().unwrap().clone(),
 
                             _ => {
