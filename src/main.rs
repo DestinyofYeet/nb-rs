@@ -76,16 +76,9 @@ fn main() -> Result<()> {
         )
     }
 
-    // let action = match args.action {
-    //     Some(value) => value,
-    //     None => {
-    //         println!("{}", "A command is required!".red());
-    //         let mut cmd = Args::command();
-    //         cmd.print_help().unwrap();
-    //         println!();
-    //         exit(1);
-    //     }
-    // };
+    if config.offline {
+        debug!("We are offline, not syncing stuff!");
+    }
 
     match args.action {
         args::actions::ActionArgs::Create { folder, note } => {

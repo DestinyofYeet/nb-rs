@@ -25,6 +25,10 @@ impl Config {
 
         let editor = env::var("EDITOR").map_err(|e| ConfigGetError::NoEditor(e.to_string()))?;
 
-        Ok(Config { data_dir, editor })
+        Ok(Config {
+            data_dir,
+            editor,
+            offline: args.offline,
+        })
     }
 }

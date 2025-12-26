@@ -6,7 +6,10 @@ use tracing::debug;
 
 use crate::{
     actions::{
-        folder::{model::Folder, sync::sync_note::SyncError},
+        folder::{
+            model::Folder,
+            sync::sync_note::{SyncError, SyncStatus},
+        },
         note::model::Note,
     },
     config::model::Config,
@@ -59,8 +62,19 @@ impl Note {
                 format!("{}/{}", self.path, self.name).blue()
             );
             std::io::stdout().flush()?;
-            folder.sync_note(self, config)?;
+
             println!("{}", "Done".green());
+
+            if folder.sync_exists(config) {
+                print!("Syncing with remote...");
+                std::io::stdout().flush()?;
+            }
+
+            match folder.sync_note(self, config)? {
+                SyncStatus::Success => println!("{}", "Done".green()),
+                SyncStatus::Skipped => println!("{}", "Skipped".green()),
+                SyncStatus::NotSetup => {}
+            }
         }
 
         Ok(())

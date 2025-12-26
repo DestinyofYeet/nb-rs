@@ -26,13 +26,24 @@ pub enum SyncError {
     GitNotFound,
 }
 
+pub enum SyncStatus {
+    Success,
+    Skipped,
+    NotSetup,
+}
+
 type Error = SyncError;
 
 impl Folder {
-    pub fn sync_note(&self, note: &Note, config: &Config) -> Result<(), Error> {
+    pub fn sync_note(&self, note: &Note, config: &Config) -> Result<SyncStatus, Error> {
         if !self.sync_exists(config) {
-            return Ok(());
+            return Ok(SyncStatus::NotSetup);
         }
+
+        if config.offline {
+            return Ok(SyncStatus::Skipped);
+        }
+
         let folder_path = self.get_path();
 
         let mut stripped_path = Vec::new();
@@ -74,6 +85,6 @@ impl Folder {
             true,
         )?;
         git_root_folder.sync_run_git_command(&["push"])?;
-        Ok(())
+        Ok(SyncStatus::Success)
     }
 }
