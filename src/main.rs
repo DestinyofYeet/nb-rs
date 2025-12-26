@@ -203,3 +203,8 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    pub mod test;
+}

@@ -30,3 +30,19 @@ impl Folder {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{actions::folder::model::Folder, tests::test::Test};
+
+    #[test]
+    fn folder_create() {
+        let test = Test::setup("folder_create");
+
+        let folder = Folder::from_pathbuf(&test.dir, "test_folder").unwrap();
+
+        folder.create().unwrap();
+
+        assert!(folder.get_path().exists())
+    }
+}

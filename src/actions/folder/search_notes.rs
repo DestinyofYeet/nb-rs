@@ -88,3 +88,32 @@ impl Folder {
         Ok(matching_notes)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        actions::{folder::model::Folder, note::model::Note},
+        tests::test::Test,
+    };
+
+    #[test]
+    fn get_notes_by_name() {
+        let test = Test::setup("get_notes_by_name");
+
+        let root_folder = Folder::from_pathbuf(&test.dir, ".").unwrap();
+
+        Note::new_create(test.dir.to_str().unwrap(), "test.md").unwrap();
+
+        let folder = Folder::from_pathbuf(&test.dir, "a_folder").unwrap();
+        folder.create().unwrap();
+
+        Note::new_create(folder.get_path().to_str().unwrap(), "nested_test.md").unwrap();
+
+        let results = root_folder.get_notes_by_name("test").unwrap();
+
+        assert_eq!(
+            format!("{results:?}"),
+            r#"[Note { path: "/tmp/nb-rs_test_dir/get_notes_by_name", name: "test.md" }, Note { path: "/tmp/nb-rs_test_dir/get_notes_by_name/a_folder", name: "nested_test.md" }]"#
+        )
+    }
+}

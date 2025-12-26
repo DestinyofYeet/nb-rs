@@ -29,6 +29,8 @@ impl Config {
             data_dir,
             editor,
             offline: args.offline,
+
+            is_test: false,
         })
     }
 }

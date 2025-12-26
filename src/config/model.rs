@@ -6,4 +6,5 @@ pub struct Config {
     pub editor: String,
 
     pub offline: bool,
+    pub is_test: bool,
 }

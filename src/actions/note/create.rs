@@ -34,3 +34,19 @@ impl Note {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{actions::note::model::Note, tests::test::Test};
+
+    const TEST_NAME: &str = "create_note";
+
+    #[test]
+    fn create_note() {
+        let test = Test::setup(TEST_NAME);
+
+        let note = Note::new_create(test.dir.to_str().unwrap(), "test.md").unwrap();
+
+        assert!(note.get_path().exists());
+    }
+}
