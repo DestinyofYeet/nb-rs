@@ -1,5 +1,5 @@
 use colored::Colorize;
-use fuzzy_select::FuzzySelect;
+use inquire::Select;
 use std::{
     collections::HashMap,
     fs::{self},
@@ -116,10 +116,7 @@ fn main() -> Result<()> {
                                     map.insert(name, note);
                                 }
 
-                                let selected = FuzzySelect::new()
-                                    .with_prompt("Select a note:")
-                                    .with_options(options)
-                                    .select()?;
+                                let selected = Select::new("Select a note:", options).prompt()?;
 
                                 match map.remove(&selected) {
                                     None => {
