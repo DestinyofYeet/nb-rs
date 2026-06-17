@@ -1,6 +1,6 @@
 use crate::core::models::{note::Note, notebook::Notebook};
 
-pub trait SyncStragegy {
+pub trait SyncStrategy {
     fn setup_sync(&self, notebook: &Notebook);
     fn remove_sync(&self, notebook: &Notebook);
 

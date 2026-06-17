@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct Attachment {
     /// The name of the attachment.
     /// This should be unique

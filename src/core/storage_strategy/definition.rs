@@ -10,10 +10,13 @@ pub trait StorageStrategy<'a> {
     fn list_notebooks(&self) -> Result<Vec<Notebook>, StorageError>;
 
     /// This function creates a notebook
-    fn create_notebook(&self) -> Result<(), StorageError>;
+    fn create_notebook(&self, name: String) -> Result<(), StorageError>;
 
     /// This function deletes a notebook
-    fn delete_notebook(&self) -> Result<(), StorageError>;
+    fn delete_notebook(&self, notebook: &'a Notebook) -> Result<(), StorageError>;
+
+    /// This function gets a notebook
+    fn get_notebook(&self, name: String) -> Result<Option<Notebook>, StorageError>;
 
     /// This function lists all notes in a notebook
     fn list_notes(&self, notebook: &'a Notebook) -> Result<Vec<Note<'a>>, StorageError>;
@@ -26,7 +29,12 @@ pub trait StorageStrategy<'a> {
     ) -> Result<Vec<Note<'a>>, StorageError>;
 
     /// This function creates a note
-    fn create_note(&self, title: String, path: String) -> Result<(), StorageError>;
+    fn create_note(
+        &self,
+        notebook: &'a Notebook,
+        title: String,
+        path: String,
+    ) -> Result<(), StorageError>;
 
     /// This function deletes a note
     fn delete_note(&self, note: &Note) -> Result<(), StorageError>;

@@ -3,6 +3,11 @@ use thiserror::Error;
 #[rustfmt::skip]
 #[derive(Debug, Error)]
 pub enum StorageError {
+
+    #[error("Storage error: {0}")]
+    StorageError(String),
+
+    
     #[error("Failed to list notebooks: {0}")]
     ListNotebooks(String),
 
@@ -11,6 +16,9 @@ pub enum StorageError {
 
     #[error("Failed to delete notebook: {0}")]
     DeleteNotebook(String),
+
+    #[error("Failed to get notebook: {0}")]
+    GetNotebook(String),
 
 
     #[error("Failed to list notes: {0}")]

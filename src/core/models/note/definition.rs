@@ -1,5 +1,6 @@
 use crate::core::models::{attachment::Attachment, notebook::Notebook};
 
+#[derive(Debug, Clone)]
 pub struct Note<'a> {
     /// The title of the Note.
     /// This will be used to reference it and should be unique.
@@ -12,4 +13,6 @@ pub struct Note<'a> {
 
     /// A list of attachments this note references.
     references: Vec<Attachment>,
+
+    tags: Vec<String>,
 }
