@@ -1,9 +1,15 @@
-{ rustPlatform, lib, self, pkgs, ... }:
+{
+  rustPlatform,
+  lib,
+  self,
+  pkgs,
+  ...
+}:
 let
-  version = toString
-    (self.shortRev or self.dirtyShortRev or self.lastModified or "unknown");
+  version = toString (self.shortRev or self.dirtyShortRev or self.lastModified or "unknown");
 
-in rustPlatform.buildRustPackage {
+in
+rustPlatform.buildRustPackage {
   pname = "nb-rs";
   version = "1.0";
 
@@ -11,7 +17,7 @@ in rustPlatform.buildRustPackage {
 
   src = ./.;
 
-  cargoHash = "sha256-fiS7GPQc/frRhFB0BOHKkRkJ2nCDObrO4/Lqp5j4j9A=";
+  cargoHash = "sha256-2sttg6gUJycxREkbZ3oB1SWQ8VGXfbSi8BnSwyhSic0=";
 
   GIT_REV = version;
 
