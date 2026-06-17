@@ -41,4 +41,10 @@ pub enum StorageError {
 
     #[error("Failed to read note meta: {0}")]
     ReadNoteMeta(String),
+
+    #[error("Failed to save notebook meta: {0}")]
+    SaveNotebookMeta(String),
+
+    #[error("Failed to read notebook meta: {0}")]
+    ReadNotebookMeta(String),
 }

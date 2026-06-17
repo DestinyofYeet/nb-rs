@@ -73,7 +73,7 @@ pub fn main() -> anyhow::Result<()> {
 
             match note {
                 Some(note) => {
-                    let notebook = match nb.get_notebook(notebook.clone())? {
+                    let mut notebook = match nb.get_notebook(notebook.clone())? {
                         Some(value) => value,
                         None => {
                             return Err(anyhow::format_err!(
@@ -96,7 +96,7 @@ pub fn main() -> anyhow::Result<()> {
                         return Ok(());
                     }
 
-                    nb.create_note(&notebook, title.clone(), note.clone())?;
+                    nb.create_note(&mut notebook, title.clone(), note.clone())?;
 
                     println!(
                         "Created note {} with title {} in notebook {}.",

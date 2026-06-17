@@ -1,4 +1,4 @@
-use crate::core::models::{notebook::Notebook, notemeta::NoteMetaInformation};
+use crate::core::models::{note_meta::NoteMetaInformation, notebook::Notebook};
 
 #[derive(Debug, Clone)]
 pub struct Note<'a> {

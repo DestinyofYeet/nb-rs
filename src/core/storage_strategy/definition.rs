@@ -1,11 +1,29 @@
 use std::path::PathBuf;
 
 use crate::core::{
-    models::{note::Note, notebook::Notebook, notemeta::NoteMetaInformation},
+    models::{
+        note::Note, note_meta::NoteMetaInformation, notebook::Notebook,
+        notebook_meta::NotebookMetaInformation,
+    },
     storage_strategy::StorageError,
 };
 
 pub trait StorageStrategy<'a> {
+    type StoragePathType: From<String>;
+
+    /// This function saves notebook metainformation
+    fn save_notebook_meta(
+        &self,
+        notebook_path: &Self::StoragePathType,
+        meta: &NotebookMetaInformation,
+    ) -> Result<(), StorageError>;
+
+    /// This function reads notebook metainformation
+    fn read_notebook_meta(
+        &self,
+        notebook_path: &Self::StoragePathType,
+    ) -> Result<NotebookMetaInformation, StorageError>;
+
     /// This function lists all available notebooks
     fn list_notebooks(&self) -> Result<Vec<Notebook>, StorageError>;
 
@@ -31,19 +49,22 @@ pub trait StorageStrategy<'a> {
     /// This function saves note metainformation
     fn save_note_meta(
         &self,
-        note_path: &str,
+        note_path: &Self::StoragePathType,
         meta: &NoteMetaInformation,
     ) -> Result<(), StorageError>;
 
     /// This function reads note metainformation
-    fn read_note_meta(&self, note_path: &str) -> Result<NoteMetaInformation, StorageError>;
+    fn read_note_meta(
+        &self,
+        note_path: &Self::StoragePathType,
+    ) -> Result<NoteMetaInformation, StorageError>;
 
     /// This function creates a note
     fn create_note(
         &self,
-        notebook: &'a Notebook,
+        notebook: &'a mut Notebook,
         title: String,
-        path: String,
+        path: &Self::StoragePathType,
     ) -> Result<(), StorageError>;
 
     /// This function deletes a note

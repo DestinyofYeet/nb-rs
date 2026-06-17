@@ -24,10 +24,10 @@ where
 
     pub fn create_note(
         &self,
-        notebook: &'a Notebook,
+        notebook: &'a mut Notebook,
         title: String,
         path: String,
     ) -> Result<(), StorageError> {
-        self.storage.create_note(notebook, title, path)
+        self.storage.create_note(notebook, title, &path.into())
     }
 }
