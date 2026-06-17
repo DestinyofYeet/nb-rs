@@ -113,4 +113,19 @@ impl<'a> StorageStrategy<'a> for FileStorage {
     ) -> Result<std::path::PathBuf, crate::core::storage_strategy::StorageError> {
         todo!()
     }
+
+    fn save_note_meta(
+        &self,
+        note_path: &str,
+        meta: &crate::core::models::notemeta::NoteMetaInformation,
+    ) -> Result<(), StorageError> {
+        todo!()
+    }
+
+    fn read_note_meta(
+        &self,
+        note_path: &str,
+    ) -> Result<crate::core::models::notemeta::NoteMetaInformation, StorageError> {
+        todo!()
+    }
 }

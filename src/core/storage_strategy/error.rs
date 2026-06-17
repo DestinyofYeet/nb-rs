@@ -34,5 +34,11 @@ pub enum StorageError {
     GetNotePathForEditor(String),
 
     #[error("Failed to save note: {0}")]
-    SaveNote(String)
+    SaveNote(String),
+
+    #[error("Failed to write note meta: {0}")]
+    SaveNoteMeta(String),
+
+    #[error("Failed to read note meta: {0}")]
+    ReadNoteMeta(String),
 }

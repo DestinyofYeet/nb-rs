@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::core::{
-    models::{note::Note, notebook::Notebook},
+    models::{note::Note, notebook::Notebook, notemeta::NoteMetaInformation},
     storage_strategy::StorageError,
 };
 
@@ -27,6 +27,16 @@ pub trait StorageStrategy<'a> {
         notebook: &'a Notebook,
         search_term: String,
     ) -> Result<Vec<Note<'a>>, StorageError>;
+
+    /// This function saves note metainformation
+    fn save_note_meta(
+        &self,
+        note_path: &str,
+        meta: &NoteMetaInformation,
+    ) -> Result<(), StorageError>;
+
+    /// This function reads note metainformation
+    fn read_note_meta(&self, note_path: &str) -> Result<NoteMetaInformation, StorageError>;
 
     /// This function creates a note
     fn create_note(

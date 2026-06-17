@@ -1,18 +1,11 @@
-use crate::core::models::{attachment::Attachment, notebook::Notebook};
+use crate::core::models::{notebook::Notebook, notemeta::NoteMetaInformation};
 
 #[derive(Debug, Clone)]
 pub struct Note<'a> {
-    /// The title of the Note.
-    /// This will be used to reference it and should be unique.
-    title: String,
-
     /// The path in the notebook.
-    path: String,
+    pub(super) path: String,
 
-    notebook: &'a Notebook,
+    pub(super) notebook: &'a Notebook,
 
-    /// A list of attachments this note references.
-    references: Vec<Attachment>,
-
-    tags: Vec<String>,
+    pub(super) meta: NoteMetaInformation,
 }
