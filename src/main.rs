@@ -198,6 +198,33 @@ pub fn main() -> anyhow::Result<()> {
                 nb.save_note(&notebook, &note)?;
             }
         }
+
+        ActionArgs::List { notebook } => {
+            let notebook = match nb.get_notebook(notebook.clone())? {
+                Some(value) => value,
+                None => {
+                    return Err(anyhow::format_err!(
+                        "No notebook found with name {}",
+                        notebook.blue()
+                    ));
+                }
+            };
+
+            let notes = nb.list_notes(&notebook)?;
+
+            println!(
+                "Following notes are in the notebook {}:\n{}",
+                notebook.get_name().blue(),
+                notes
+                    .iter()
+                    .map(|note| format!(
+                        "- {} {}",
+                        note.get_title().blue(),
+                        format!("({})", note.get_file_name()).white()
+                    ))
+                    .join("\n")
+            );
+        }
     }
 
     Ok(())
