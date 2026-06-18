@@ -1,4 +1,5 @@
 mod definition;
-mod get_title;
+mod getter;
+mod new;
 
 pub use definition::*;

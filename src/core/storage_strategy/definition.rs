@@ -9,7 +9,7 @@ use crate::core::{
 };
 
 pub trait StorageStrategy<'a> {
-    type StoragePathType: From<String>;
+    type StoragePathType: From<&'a str>;
 
     /// This function saves notebook metainformation
     fn save_notebook_meta(
@@ -46,6 +46,13 @@ pub trait StorageStrategy<'a> {
         search_term: String,
     ) -> Result<Vec<Note<'a>>, StorageError>;
 
+    /// This function gets a note in a notebook
+    fn get_note_by_path(
+        &self,
+        notebook: &'a Notebook,
+        note_path: &Self::StoragePathType,
+    ) -> Result<Option<Note<'a>>, StorageError>;
+
     /// This function saves note metainformation
     fn save_note_meta(
         &self,
@@ -68,10 +75,10 @@ pub trait StorageStrategy<'a> {
     ) -> Result<(), StorageError>;
 
     /// This function deletes a note
-    fn delete_note(&self, note: &Note) -> Result<(), StorageError>;
+    fn delete_note(&self, notebook: &'a mut Notebook, note: &Note) -> Result<(), StorageError>;
 
     /// This function saves a note, after it was modified by the editor
-    fn save_note(&self, note: &Note) -> Result<(), StorageError>;
+    fn save_note(&self, notebook: &'a Notebook, note: &Note) -> Result<(), StorageError>;
 
     /// This function returns the path for the note on the local filesystems.
     /// This will be used to open the editor.

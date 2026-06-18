@@ -1,7 +1,9 @@
 mod definition;
+mod error;
 pub mod models;
-mod simple_ops;
 pub mod storage_strategy;
 pub mod sync_strategy;
+mod wrapper;
 
 pub use definition::*;
+pub use error::*;

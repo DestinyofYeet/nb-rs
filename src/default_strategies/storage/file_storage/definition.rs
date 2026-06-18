@@ -1,5 +1,6 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use itertools::Itertools;
 use tracing::debug;
 
 use crate::core::{
@@ -17,10 +18,10 @@ pub struct FileStorage {
 impl FileStorage {
     const BOOK_METADATA_PATH: &str = ".notebook_meta.json";
 
-    fn note_metadata_path(path: &PathBuf) -> PathBuf {
+    fn note_metadata_path(path: &Path) -> PathBuf {
         let file_name = path.file_name().map(|e| e.to_str().unwrap()).unwrap();
 
-        path.with_file_name(&format!("{file_name}_meta.json"))
+        path.with_file_name(format!("{file_name}_meta.json"))
     }
 
     pub fn new(data_dir: PathBuf) -> Result<Self, StorageError> {
@@ -96,7 +97,24 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         notebook: &'a crate::core::models::notebook::Notebook,
     ) -> Result<Vec<crate::core::models::note::Note<'a>>, crate::core::storage_strategy::StorageError>
     {
-        todo!()
+        let notes = notebook.get_meta().get_notes();
+
+        let mut results = Vec::new();
+
+        for note in notes {
+            results.push(
+                match self.get_note_by_path(notebook, &PathBuf::from(note))? {
+                    Some(value) => value,
+                    None => {
+                        return Err(StorageError::ListNotes(format!(
+                            "Note {note} should exist, but it doesnt."
+                        )));
+                    }
+                },
+            );
+        }
+
+        Ok(results)
     }
 
     fn search_notes(
@@ -138,23 +156,55 @@ impl<'a> StorageStrategy<'a> for FileStorage {
 
     fn delete_note(
         &self,
+        notebook: &'a mut Notebook,
         note: &crate::core::models::note::Note,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        todo!()
+        let note_path = PathBuf::from(note.get_path());
+        std::fs::remove_file(&note_path)
+            .map_err(|e| StorageError::DeleteNote(format!("Failed to delete note: {e}")))?;
+
+        std::fs::remove_file(FileStorage::note_metadata_path(&note_path))
+            .map_err(|e| StorageError::DeleteNote(format!("Failed to delete metadata: {e}")))?;
+
+        notebook.get_meta_mut().remove_note(note.get_path());
+
+        self.save_notebook_meta(&PathBuf::from(notebook.get_path()), notebook.get_meta())?;
+
+        Ok(())
     }
 
     fn save_note(
         &self,
+        _notebook: &'a Notebook,
         note: &crate::core::models::note::Note,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        todo!()
+        self.save_note_meta(&PathBuf::from(note.get_path()), note.get_metadata())?;
+        Ok(())
+    }
+
+    fn get_note_by_path(
+        &self,
+        notebook: &'a Notebook,
+        note_path: &Self::StoragePathType,
+    ) -> Result<Option<Note<'a>>, StorageError> {
+        let mut maybe_path = PathBuf::from(notebook.get_path());
+        maybe_path.push(note_path);
+
+        if !maybe_path.exists() {
+            return Ok(None);
+        }
+
+        let meta = self.read_note_meta(&maybe_path)?;
+        let note = Note::new(maybe_path.to_str().unwrap().to_string(), notebook, meta);
+
+        Ok(Some(note))
     }
 
     fn get_note_path_for_editor(
         &self,
         note: &crate::core::models::note::Note,
     ) -> Result<std::path::PathBuf, crate::core::storage_strategy::StorageError> {
-        todo!()
+        Ok(PathBuf::from(note.get_path()))
     }
 
     fn save_note_meta(
@@ -183,9 +233,8 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         let content = std::fs::read_to_string(path)
             .map_err(|e| StorageError::ReadNoteMeta(format!("Failed to read metadata: {e}")))?;
 
-        Ok(serde_json::from_str(&content).map_err(|e| {
-            StorageError::ReadNoteMeta(format!("Failed to deserialize metadata: {e}"))
-        })?)
+        serde_json::from_str(&content)
+            .map_err(|e| StorageError::ReadNoteMeta(format!("Failed to deserialize metadata: {e}")))
     }
 
     fn save_notebook_meta(

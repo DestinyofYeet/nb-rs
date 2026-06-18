@@ -1,6 +1,9 @@
+use std::{fs::File, process::Command};
+
 use clap::{CommandFactory, FromArgMatches, error::ErrorKind};
 use colored::Colorize;
-use inquire::{Confirm, CustomType, InputAction};
+use inquire::{Confirm, CustomType, Select};
+use itertools::Itertools;
 use nb_rs::{
     core::Nb,
     default_strategies::{storage::file_storage::FileStorage, sync::git::GitSync},
@@ -96,7 +99,7 @@ pub fn main() -> anyhow::Result<()> {
                         return Ok(());
                     }
 
-                    nb.create_note(&mut notebook, title.clone(), note.clone())?;
+                    nb.create_note(&mut notebook, title.clone(), &note)?;
 
                     println!(
                         "Created note {} with title {} in notebook {}.",
@@ -114,6 +117,85 @@ pub fn main() -> anyhow::Result<()> {
                     nb.create_notebook(notebook.clone())?;
                     println!("Created notebook {}.", notebook.blue());
                 }
+            }
+        }
+
+        ActionArgs::Open { notebook, note } => {
+            let notebook = match nb.get_notebook(notebook.clone())? {
+                Some(value) => value,
+                None => {
+                    return Err(anyhow::format_err!(
+                        "Failed to find notebook {}",
+                        notebook.blue()
+                    ));
+                }
+            };
+
+            let note = match nb.get_note(&notebook, &note)? {
+                Some(note) => note,
+                None => {
+                    let mut notes = nb.list_notes(&notebook)?;
+                    notes.retain(|e| e.get_title().to_lowercase().contains(&note.to_lowercase()));
+
+                    match notes.len() {
+                        0 => {
+                            return Err(anyhow::format_err!("No notes found with {}", note.blue()));
+                        }
+
+                        1 => notes.pop().unwrap(),
+
+                        _ => {
+                            let notes_string = notes.iter().map(|e| e.get_title()).collect_vec();
+
+                            let note_selection =
+                                Select::new("Select a note:", notes_string).prompt()?;
+
+                            let note = match notes.iter().find(|e| e.get_title() == note_selection)
+                            {
+                                Some(note) => note,
+                                None => {
+                                    return Err(anyhow::format_err!(
+                                        "Failed to find note {}",
+                                        note_selection.blue()
+                                    ));
+                                }
+                            };
+
+                            note.clone()
+                        }
+                    }
+                }
+            };
+
+            let note_path = nb.get_note_path_for_editor(&note)?;
+
+            let old_modified = {
+                let file = File::open(&note_path)?;
+                let modified = file.metadata()?.modified()?;
+                drop(file);
+                modified
+            };
+
+            let mut editor_process = Command::new(config.editor_cmd);
+            editor_process.arg(&note_path);
+
+            debug!(
+                "Executing {:?} with args {:?}",
+                editor_process.get_program(),
+                editor_process.get_args()
+            );
+
+            editor_process.status()?;
+
+            let new_modified = {
+                let file = File::open(&note_path)?;
+                let modified = file.metadata()?.modified()?;
+                drop(file);
+                modified
+            };
+
+            if new_modified != old_modified {
+                nb.save_note(&notebook, &note)?;
             }
         }
     }
