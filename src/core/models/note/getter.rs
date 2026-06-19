@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::core::models::{note::Note, note_meta::NoteMetaInformation};
 
 impl<'a> Note<'a> {
-    pub(crate) fn get_path(&self) -> &str {
+    pub fn get_path(&self) -> &str {
         &self.path
     }
 

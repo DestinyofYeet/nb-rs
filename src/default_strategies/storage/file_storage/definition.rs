@@ -157,16 +157,20 @@ impl<'a> StorageStrategy<'a> for FileStorage {
     fn delete_note(
         &self,
         notebook: &'a mut Notebook,
-        note: &crate::core::models::note::Note,
+        note_path: &Self::StoragePathType,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        let note_path = PathBuf::from(note.get_path());
-        std::fs::remove_file(&note_path)
+        std::fs::remove_file(note_path)
             .map_err(|e| StorageError::DeleteNote(format!("Failed to delete note: {e}")))?;
 
-        std::fs::remove_file(FileStorage::note_metadata_path(&note_path))
+        std::fs::remove_file(FileStorage::note_metadata_path(note_path))
             .map_err(|e| StorageError::DeleteNote(format!("Failed to delete metadata: {e}")))?;
 
-        notebook.get_meta_mut().remove_note(note.get_path());
+        notebook.get_meta_mut().remove_note(
+            &note_path
+                .file_name()
+                .expect("to have a filename")
+                .to_string_lossy(),
+        );
 
         self.save_notebook_meta(&PathBuf::from(notebook.get_path()), notebook.get_meta())?;
 

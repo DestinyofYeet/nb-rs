@@ -225,6 +225,48 @@ pub fn main() -> anyhow::Result<()> {
                     .join("\n")
             );
         }
+
+        ActionArgs::Delete { notebook, note } => {
+            let mut notebook = match nb.get_notebook(notebook.clone())? {
+                Some(value) => value,
+                None => {
+                    return Err(anyhow::format_err!(
+                        "No notebook found with name {}",
+                        notebook.blue()
+                    ));
+                }
+            };
+
+            let note = match nb.get_note(&notebook, &note)? {
+                Some(note) => note,
+                None => {
+                    return Err(anyhow::format_err!(
+                        "No note found with name {} in notebook {}",
+                        note.blue(),
+                        notebook.get_name().blue()
+                    ));
+                }
+            };
+
+            let path = note.get_path().to_string();
+
+            if !Confirm::new(&format!(
+                "Delete note {} in notebook {}",
+                note.get_title().blue(),
+                notebook.get_name().blue()
+            ))
+            .prompt()?
+            {
+                println!("{}", "Cancelled".red());
+                return Ok(());
+            }
+
+            drop(note);
+
+            nb.delete_note(&mut notebook, &path)?;
+
+            println!("{}", "Deleted".green());
+        }
     }
 
     Ok(())

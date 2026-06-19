@@ -57,4 +57,12 @@ where
     pub fn list_notes(&self, notebook: &'a Notebook) -> Result<Vec<Note<'a>>, NbError> {
         Ok(self.storage.list_notes(notebook)?)
     }
+
+    pub fn delete_note(
+        &self,
+        notebook: &'a mut Notebook,
+        note_path: &'a str,
+    ) -> Result<(), NbError> {
+        Ok(self.storage.delete_note(notebook, &note_path.into())?)
+    }
 }

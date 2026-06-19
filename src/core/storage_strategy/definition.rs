@@ -75,7 +75,11 @@ pub trait StorageStrategy<'a> {
     ) -> Result<(), StorageError>;
 
     /// This function deletes a note
-    fn delete_note(&self, notebook: &'a mut Notebook, note: &Note) -> Result<(), StorageError>;
+    fn delete_note(
+        &self,
+        notebook: &'a mut Notebook,
+        note_path: &Self::StoragePathType,
+    ) -> Result<(), StorageError>;
 
     /// This function saves a note, after it was modified by the editor
     fn save_note(&self, notebook: &'a Notebook, note: &Note) -> Result<(), StorageError>;
