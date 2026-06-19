@@ -165,12 +165,16 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         std::fs::remove_file(FileStorage::note_metadata_path(note_path))
             .map_err(|e| StorageError::DeleteNote(format!("Failed to delete metadata: {e}")))?;
 
-        notebook.get_meta_mut().remove_note(
+        if !notebook.get_meta_mut().remove_note(
             &note_path
                 .file_name()
                 .expect("to have a filename")
                 .to_string_lossy(),
-        );
+        ) {
+            return Err(StorageError::DeleteNote(format!(
+                "Path {note_path:?} didn't get removed from metadata"
+            )));
+        };
 
         self.save_notebook_meta(&PathBuf::from(notebook.get_path()), notebook.get_meta())?;
 

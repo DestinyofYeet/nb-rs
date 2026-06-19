@@ -212,18 +212,29 @@ pub fn main() -> anyhow::Result<()> {
 
             let notes = nb.list_notes(&notebook)?;
 
-            println!(
-                "Following notes are in the notebook {}:\n{}",
-                notebook.get_name().blue(),
-                notes
-                    .iter()
-                    .map(|note| format!(
-                        "- {} {}",
-                        note.get_title().blue(),
-                        format!("({})", note.get_file_name()).white()
-                    ))
-                    .join("\n")
-            );
+            match notes.len() {
+                0 => {
+                    println!(
+                        "There are no notes in the notebook {}",
+                        notebook.get_name().blue()
+                    );
+                }
+
+                _ => {
+                    println!(
+                        "Following notes are in the notebook {}:\n{}",
+                        notebook.get_name().blue(),
+                        notes
+                            .iter()
+                            .map(|note| format!(
+                                "- {} {}",
+                                note.get_title().blue(),
+                                format!("({})", note.get_file_name()).white()
+                            ))
+                            .join("\n")
+                    );
+                }
+            }
         }
 
         ActionArgs::Delete { notebook, note } => {
