@@ -5,7 +5,7 @@ use colored::Colorize;
 use inquire::{Confirm, CustomType, Select};
 use itertools::Itertools;
 use nb_rs::{
-    core::Nb,
+    core::{Nb, nb_wrapper::NbWrapper},
     default_strategies::{storage::file_storage::FileStorage, sync::git::GitSync},
 };
 use tracing::{debug, trace};
@@ -65,7 +65,8 @@ pub fn main() -> anyhow::Result<()> {
 
     debug!("data_dir: {:?}", config.data_dir);
 
-    let nb = Nb::new(FileStorage::new(config.data_dir)?, GitSync {});
+    let nb: Box<dyn NbWrapper> = Box::new(Nb::new(FileStorage::new(config.data_dir)?, GitSync {}));
+    // let nb = Box::leak(nb);
 
     match args.action {
         ActionArgs::Create { notebook, note } => {
@@ -108,6 +109,7 @@ pub fn main() -> anyhow::Result<()> {
                         notebook.get_name().blue()
                     );
                 }
+
                 None => {
                     if !Confirm::new(&format!("Create notebook {}?", notebook.blue())).prompt()? {
                         println!("{}", "Cancelled".red());
@@ -248,35 +250,52 @@ pub fn main() -> anyhow::Result<()> {
                 }
             };
 
-            let note = match nb.get_note(&notebook, &note)? {
-                Some(note) => note,
+            match note {
                 None => {
-                    return Err(anyhow::format_err!(
-                        "No note found with name {} in notebook {}",
-                        note.blue(),
-                        notebook.get_name().blue()
-                    ));
+                    if !Confirm::new(&format!("Delete notebook {}?", notebook.get_name().blue()))
+                        .prompt()?
+                    {
+                        println!("{}", "Cancelled".red());
+                        return Ok(());
+                    }
+
+                    nb.delete_notebook(&notebook)?;
+
+                    println!("{}", "Deleted".green());
                 }
-            };
 
-            let path = note.get_path().to_string();
+                Some(note) => {
+                    let note = match nb.get_note(&notebook, &note)? {
+                        Some(note) => note,
+                        None => {
+                            return Err(anyhow::format_err!(
+                                "No note found with name {} in notebook {}",
+                                note.blue(),
+                                notebook.get_name().blue()
+                            ));
+                        }
+                    };
 
-            if !Confirm::new(&format!(
-                "Delete note {} in notebook {}",
-                note.get_title().blue(),
-                notebook.get_name().blue()
-            ))
-            .prompt()?
-            {
-                println!("{}", "Cancelled".red());
-                return Ok(());
+                    let path = note.get_path().to_string();
+
+                    if !Confirm::new(&format!(
+                        "Delete note {} in notebook {}",
+                        note.get_title().blue(),
+                        notebook.get_name().blue()
+                    ))
+                    .prompt()?
+                    {
+                        println!("{}", "Cancelled".red());
+                        return Ok(());
+                    }
+
+                    drop(note);
+
+                    nb.delete_note(&mut notebook, &path)?;
+
+                    println!("{}", "Deleted".green());
+                }
             }
-
-            drop(note);
-
-            nb.delete_note(&mut notebook, &path)?;
-
-            println!("{}", "Deleted".green());
         }
     }
 

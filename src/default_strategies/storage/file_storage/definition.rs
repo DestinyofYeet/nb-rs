@@ -35,8 +35,8 @@ impl FileStorage {
     }
 }
 
-impl<'a> StorageStrategy<'a> for FileStorage {
-    type StoragePathType = PathBuf;
+impl StorageStrategy for FileStorage {
+    type StoragePathType<'a> = PathBuf;
 
     fn list_notebooks(
         &self,
@@ -72,7 +72,7 @@ impl<'a> StorageStrategy<'a> for FileStorage {
 
     fn delete_notebook(
         &self,
-        notebook: &'a crate::core::models::notebook::Notebook,
+        notebook: &Notebook,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
         todo!()
     }
@@ -92,7 +92,7 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(None)
     }
 
-    fn list_notes(
+    fn list_notes<'a>(
         &self,
         notebook: &'a crate::core::models::notebook::Notebook,
     ) -> Result<Vec<crate::core::models::note::Note<'a>>, crate::core::storage_strategy::StorageError>
@@ -117,7 +117,7 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(results)
     }
 
-    fn search_notes(
+    fn search_notes<'a>(
         &self,
         notebook: &'a crate::core::models::notebook::Notebook,
         search_term: String,
@@ -126,11 +126,11 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         todo!()
     }
 
-    fn create_note(
+    fn create_note<'a>(
         &self,
         notebook: &'a mut Notebook,
         title: String,
-        path: &Self::StoragePathType,
+        path: &Self::StoragePathType<'a>,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
         let mut note_path = PathBuf::from(notebook.get_path());
         note_path.push(path);
@@ -154,10 +154,10 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(())
     }
 
-    fn delete_note(
+    fn delete_note<'a>(
         &self,
         notebook: &'a mut Notebook,
-        note_path: &Self::StoragePathType,
+        note_path: &Self::StoragePathType<'a>,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
         std::fs::remove_file(note_path)
             .map_err(|e| StorageError::DeleteNote(format!("Failed to delete note: {e}")))?;
@@ -181,7 +181,7 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(())
     }
 
-    fn save_note(
+    fn save_note<'a>(
         &self,
         _notebook: &'a Notebook,
         note: &crate::core::models::note::Note,
@@ -190,10 +190,10 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(())
     }
 
-    fn get_note_by_path(
+    fn get_note_by_path<'a>(
         &self,
         notebook: &'a Notebook,
-        note_path: &Self::StoragePathType,
+        note_path: &Self::StoragePathType<'a>,
     ) -> Result<Option<Note<'a>>, StorageError> {
         let mut maybe_path = PathBuf::from(notebook.get_path());
         maybe_path.push(note_path);
@@ -215,9 +215,9 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(PathBuf::from(note.get_path()))
     }
 
-    fn save_note_meta(
+    fn save_note_meta<'a>(
         &self,
-        note_path: &Self::StoragePathType,
+        note_path: &Self::StoragePathType<'a>,
         meta: &crate::core::models::note_meta::NoteMetaInformation,
     ) -> Result<(), StorageError> {
         let path = Self::note_metadata_path(note_path);
@@ -232,9 +232,9 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(())
     }
 
-    fn read_note_meta(
+    fn read_note_meta<'a>(
         &self,
-        note_path: &Self::StoragePathType,
+        note_path: &Self::StoragePathType<'a>,
     ) -> Result<crate::core::models::note_meta::NoteMetaInformation, StorageError> {
         let path = Self::note_metadata_path(note_path);
 
@@ -245,9 +245,9 @@ impl<'a> StorageStrategy<'a> for FileStorage {
             .map_err(|e| StorageError::ReadNoteMeta(format!("Failed to deserialize metadata: {e}")))
     }
 
-    fn save_notebook_meta(
+    fn save_notebook_meta<'a>(
         &self,
-        notebook_path: &Self::StoragePathType,
+        notebook_path: &Self::StoragePathType<'a>,
         meta: &NotebookMetaInformation,
     ) -> Result<(), StorageError> {
         let mut path = PathBuf::from(notebook_path);
@@ -265,9 +265,9 @@ impl<'a> StorageStrategy<'a> for FileStorage {
         Ok(())
     }
 
-    fn read_notebook_meta(
+    fn read_notebook_meta<'a>(
         &self,
-        notebook_path: &Self::StoragePathType,
+        notebook_path: &Self::StoragePathType<'a>,
     ) -> Result<NotebookMetaInformation, StorageError> {
         let mut path = PathBuf::from(notebook_path);
 

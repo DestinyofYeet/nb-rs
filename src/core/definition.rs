@@ -4,7 +4,7 @@ use crate::core::{storage_strategy::StorageStrategy, sync_strategy::SyncStrategy
 
 pub struct Nb<'a, ST, SY>
 where
-    ST: StorageStrategy<'a>,
+    ST: StorageStrategy,
     SY: SyncStrategy,
 {
     pub(super) storage: ST,
@@ -14,7 +14,7 @@ where
 
 impl<'a, ST, SY> Nb<'a, ST, SY>
 where
-    ST: StorageStrategy<'a>,
+    ST: StorageStrategy,
     SY: SyncStrategy,
 {
     pub fn new(storage: ST, sync: SY) -> Self {
