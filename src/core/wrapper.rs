@@ -8,7 +8,7 @@ use crate::{
         storage_strategy::StorageStrategy,
         sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
     },
-    default_strategies::sync::{AvailableDefaultSyncStrategies, git::GitSync, no_op::NoopSync},
+    default_strategies::sync::no_op::NoopSync,
 };
 
 impl<'n, ST> NbWrapper for Nb<'n, ST>
@@ -88,6 +88,10 @@ where
         self.storage
             .save_notebook_meta(&notebook.get_path().into(), notebook.get_meta())?;
 
+        let meta = notebook.get_meta().get_sync_information().get_strategy()?;
+
+        meta.sync_manual(notebook)?;
+
         Ok(())
     }
 
@@ -107,6 +111,13 @@ where
         let meta = note.get_notebook().get_meta();
         let sync = meta.get_sync_information().get_strategy()?;
         sync.sync_note(note)?;
+        Ok(())
+    }
+
+    fn sync_manual(&self, notebook: &Notebook) -> Result<(), NbError> {
+        let sync = notebook.get_meta().get_sync_information().get_strategy()?;
+        sync.sync_manual(notebook)?;
+
         Ok(())
     }
 }

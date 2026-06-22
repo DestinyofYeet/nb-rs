@@ -43,4 +43,5 @@ pub trait NbWrapper {
     fn remove_sync(&self, notebook: &mut Notebook) -> Result<(), NbError>;
 
     fn sync_note(&self, note: &Note) -> Result<(), NbError>;
+    fn sync_manual(&self, notebook: &Notebook) -> Result<(), NbError>;
 }

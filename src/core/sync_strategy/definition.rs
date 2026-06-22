@@ -14,6 +14,8 @@ pub trait SyncStrategy {
 
     fn sync_note(&self, note: &Note) -> Result<(), SyncError>;
 
+    fn sync_manual(&self, notebook: &Notebook) -> Result<(), SyncError>;
+
     fn from_metadata(metadata: &SyncMetaInformation) -> Self
     where
         Self: Sized;

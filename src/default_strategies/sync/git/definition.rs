@@ -15,16 +15,38 @@ pub struct GitSync {
     pub(super) meta: GitSyncMeta,
 }
 
+struct GitCommand<'a> {
+    can_fail: bool,
+    cwd: &'a str,
+    args: &'a [&'a str],
+}
+
+impl<'a> GitCommand<'a> {
+    pub fn new(cwd: &'a str, args: &'a [&'a str]) -> Self {
+        Self {
+            can_fail: false,
+            cwd,
+            args,
+        }
+    }
+
+    pub fn set_failable(mut self, can_fail: bool) -> Self {
+        self.can_fail = can_fail;
+        self
+    }
+}
+
 impl GitSync {
     pub fn new(meta: GitSyncMeta) -> Self {
         Self { meta }
     }
 
-    pub fn run_git_command(&self, cwd: &str, commands: &[&str]) -> Result<(), SyncError> {
+    pub fn run_git_command(&self, git_command: GitCommand) -> Result<(), SyncError> {
         let mut command = Command::new("git");
+
         command
-            .args(commands)
-            .current_dir(cwd)
+            .args(git_command.args)
+            .current_dir(git_command.cwd)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -35,7 +57,7 @@ impl GitSync {
             .output()
             .map_err(|e| SyncError::Sync(format!("Failed to get process output: {e}")))?;
 
-        if !output.status.success() {
+        if !output.status.success() && !git_command.can_fail {
             let stdout = String::from_utf8(output.stdout).expect("to parse stdout");
             let stderr = String::from_utf8(output.stderr).expect("to parse stderr");
 
@@ -54,19 +76,21 @@ impl SyncStrategy for GitSync {
         notebook: &crate::core::models::notebook::Notebook,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         let path = notebook.get_path();
-
-        self.run_git_command(path, &["init", "-b", &self.meta.branch])?;
-        self.run_git_command(path, &["remote", "add", "origin", &self.meta.repo_url])?;
-        self.run_git_command(path, &["switch", "-c", &self.meta.branch])?;
-        self.run_git_command(path, &["add", "-A"])?;
-        self.run_git_command(
+        self.run_git_command(GitCommand::new(path, &["init", "-b", &self.meta.branch]))?;
+        self.run_git_command(GitCommand::new(
             path,
-            &["commit", "-m", &format!("[{}] Init", notebook.get_name())],
-        )?;
-        self.run_git_command(
+            &["remote", "add", "origin", &self.meta.repo_url],
+        ))?;
+
+        self.run_git_command(GitCommand::new(path, &["switch", "-c", &self.meta.branch]))?;
+        self.run_git_command(GitCommand::new(path, &["add", "-A"]))?;
+        self.run_git_command(GitCommand::new(path, &["commit", "-m", "Init"]).set_failable(true))?;
+
+        // maybe can fail
+        self.run_git_command(GitCommand::new(
             path,
             &["push", "--set-upstream", "origin", &self.meta.branch],
-        )?;
+        ))?;
 
         let meta = SyncMetaInformation {
             strategy_name: Self::get_name().to_string(),
@@ -102,6 +126,13 @@ impl SyncStrategy for GitSync {
             .map(|e| e.get_path())
             .collect_vec();
 
+        let files_string = note
+            .get_metadata()
+            .attachments
+            .iter()
+            .map(|e| e.get_name())
+            .join(", ");
+
         let files: Vec<&str> = {
             let mut vec = Vec::new();
             vec.push("add");
@@ -110,8 +141,16 @@ impl SyncStrategy for GitSync {
             vec
         };
 
-        self.run_git_command(notebook_path, &files)?;
-        self.run_git_command(notebook_path, &["push"])?;
+        self.run_git_command(GitCommand::new(notebook_path, &files))?;
+        self.run_git_command(GitCommand::new(
+            notebook_path,
+            &[
+                "commit",
+                "-m",
+                &format!("Edit: {} | {}", note.get_title(), files_string),
+            ],
+        ))?;
+        self.run_git_command(GitCommand::new(notebook_path, &["push"]))?;
 
         Ok(())
     }
@@ -125,5 +164,21 @@ impl SyncStrategy for GitSync {
 
     fn get_name() -> &'static str {
         "git"
+    }
+
+    fn sync_manual(
+        &self,
+        notebook: &crate::core::models::notebook::Notebook,
+    ) -> Result<(), SyncError> {
+        let path = notebook.get_path();
+
+        self.run_git_command(GitCommand::new(path, &["pull"]))?;
+        self.run_git_command(GitCommand::new(path, &["add", "-A"]))?;
+        self.run_git_command(
+            GitCommand::new(path, &["commit", "-m", "Manual sync"]).set_failable(true),
+        )?;
+        self.run_git_command(GitCommand::new(path, &["push"]))?;
+
+        Ok(())
     }
 }

@@ -11,4 +11,7 @@ pub enum SyncArgs {
 
     #[command(about = "Remove sync")]
     Rm {},
+
+    #[command(about = "Manual sync")]
+    Manual {},
 }

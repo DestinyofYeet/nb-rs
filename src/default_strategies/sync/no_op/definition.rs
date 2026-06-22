@@ -37,4 +37,11 @@ impl SyncStrategy for NoopSync {
     {
         "no_op"
     }
+
+    fn sync_manual(
+        &self,
+        _notebook: &crate::core::models::notebook::Notebook,
+    ) -> Result<(), crate::core::sync_strategy::SyncError> {
+        Ok(())
+    }
 }

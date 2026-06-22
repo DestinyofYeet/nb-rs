@@ -388,6 +388,13 @@ pub fn main() -> anyhow::Result<()> {
 
                     println!("{}", "Success".green());
                 }
+
+                SyncArgs::Manual {} => {
+                    println!("Manually syncing {}", notebook.get_name().blue());
+                    nb.sync_manual(&notebook)?;
+
+                    println!("{}", "Done".green());
+                }
             }
         }
     }
