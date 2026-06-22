@@ -35,4 +35,9 @@ pub trait NbWrapper {
         notebook: &'a mut Notebook,
         note_path: &'a str,
     ) -> Result<(), NbError>;
+
+    fn setup_sync(&self, notebook: &Notebook);
+    fn remove_sync(&self, notebook: &Notebook);
+
+    fn sync_note(&self, note: &Note);
 }

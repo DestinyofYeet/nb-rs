@@ -47,7 +47,11 @@ where
     }
 
     fn save_note(&self, notebook: &Notebook, note: &Note) -> Result<(), NbError> {
-        Ok(self.storage.save_note(notebook, note)?)
+        self.storage.save_note(notebook, note)?;
+
+        self.sync.sync_note(note);
+
+        Ok(())
     }
 
     fn list_notes<'a>(&self, notebook: &'a Notebook) -> Result<Vec<Note<'a>>, NbError> {
@@ -64,5 +68,17 @@ where
 
     fn delete_notebook(&self, notebook: &Notebook) -> Result<(), NbError> {
         Ok(self.storage.delete_notebook(notebook)?)
+    }
+
+    fn setup_sync(&self, notebook: &Notebook) {
+        self.sync.setup_sync(notebook);
+    }
+
+    fn remove_sync(&self, notebook: &Notebook) {
+        self.sync.remove_sync(notebook);
+    }
+
+    fn sync_note(&self, note: &Note) {
+        self.sync.sync_note(note);
     }
 }
