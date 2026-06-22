@@ -399,12 +399,9 @@ pub fn main() -> anyhow::Result<()> {
                     println!("{}", "Done".green());
                 }
 
-                SyncArgs::Import { kind, notebook } => {
-                    if nb.get_notebook(notebook.clone())?.is_some() {
-                        println!(
-                            "The notebook {} exists. Please choose a new name.",
-                            notebook.blue()
-                        );
+                SyncArgs::Import { kind } => {
+                    if !notebook.get_meta().get_notes().is_empty() {
+                        println!("Notebook {} must be empty!", notebook.get_name());
                         return Ok(());
                     }
 
@@ -415,7 +412,7 @@ pub fn main() -> anyhow::Result<()> {
                             let branch = CustomType::<String>::new("Import branch:").prompt()?;
 
                             if !Confirm::new(&format!(
-                                "Import git repositry from url {} at branch {}?",
+                                "Import git repository from url {} at branch {}?",
                                 repo_url.blue(),
                                 branch.blue()
                             ))

@@ -50,4 +50,7 @@ pub enum StorageError {
 
     #[error("Failed to get path on fs: {0}")]
     PathOnFs(String),
+
+    #[error("Failed to list files: {0}")]
+    ListFiles(String),
 }

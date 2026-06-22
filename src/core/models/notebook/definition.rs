@@ -23,7 +23,7 @@ impl Notebook {
         &mut self.meta
     }
 
-    pub(crate) fn get_meta(&self) -> &NotebookMetaInformation {
+    pub fn get_meta(&self) -> &NotebookMetaInformation {
         &self.meta
     }
 

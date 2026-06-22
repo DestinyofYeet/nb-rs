@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use crate::{
     core::{
         Nb, NbError,
-        models::{note::Note, notebook::Notebook},
+        models::{
+            note::Note, note_meta::NoteMetaInformation, notebook::Notebook,
+            notebook_meta::NotebookMetaInformation,
+        },
         nb_wrapper::NbWrapper,
         storage_strategy::StorageStrategy,
         sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
@@ -121,9 +124,29 @@ where
         Ok(())
     }
 
-    fn sync_import(&self, sync: Box<dyn SyncStrategy>, notebook_name: &str) -> Result<(), NbError> {
-        // let path = self.storage.get_path_on_fs(notebook, path)
-        // sync.sync_import()
+    fn sync_import(&self, sync: Box<dyn SyncStrategy>, notebook: &Notebook) -> Result<(), NbError> {
+        let path = notebook.get_path();
+
+        let meta = sync.sync_import(path)?;
+
+        let mut book_meta = NotebookMetaInformation::new();
+        book_meta.set_sync_meta(meta);
+
+        for file in self.storage.list_files(notebook)? {
+            book_meta.add_note(file.clone());
+
+            let mut note_path = PathBuf::from(notebook.get_path());
+            note_path.push(file.clone());
+
+            self.storage.save_note_meta(
+                &note_path.to_str().expect("to have a valid path").into(),
+                &NoteMetaInformation::new(file),
+            )?;
+        }
+
+        self.storage
+            .save_notebook_meta(&notebook.get_path().into(), &book_meta)?;
+
         Ok(())
     }
 }

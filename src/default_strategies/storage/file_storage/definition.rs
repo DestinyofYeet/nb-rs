@@ -84,9 +84,9 @@ impl StorageStrategy for FileStorage {
             StorageError::CreateNotebook(format!("Failed to create directory: {e}"))
         })?;
 
-        let meta_informatin = NotebookMetaInformation::new();
+        let meta_information = NotebookMetaInformation::new();
 
-        self.save_notebook_meta(&new_path, &meta_informatin)?;
+        self.save_notebook_meta(&new_path, &meta_information)?;
 
         Ok(())
     }
@@ -319,5 +319,31 @@ impl StorageStrategy for FileStorage {
         }
 
         Ok(book_path)
+    }
+
+    fn get_root_path_on_fs<'a>(&self) -> Result<PathBuf, StorageError> {
+        Ok(self.data_dir.clone())
+    }
+
+    fn list_files(&self, notebook: &Notebook) -> Result<Vec<String>, StorageError> {
+        let mut files = Vec::new();
+
+        let dir = std::fs::read_dir(notebook.get_path())
+            .map_err(|e| StorageError::ListFiles(format!("Failed to read directory: {e}")))?;
+
+        for entry in dir {
+            let entry =
+                entry.map_err(|e| StorageError::ListFiles(format!("Failed to get entry: {e}")))?;
+
+            if entry
+                .file_type()
+                .map_err(|e| StorageError::ListFiles(format!("Failed to get file type: {e}")))?
+                .is_file()
+            {
+                files.push(entry.file_name().to_string_lossy().to_string());
+            }
+        }
+
+        Ok(files)
     }
 }

@@ -45,5 +45,9 @@ pub trait NbWrapper {
     fn sync_note(&self, note: &Note) -> Result<(), NbError>;
     fn sync_manual(&self, notebook: &Notebook) -> Result<(), NbError>;
 
-    fn sync_import(&self, sync: Box<dyn SyncStrategy>, notebook_name: &str) -> Result<(), NbError>;
+    fn sync_import(
+        &self,
+        sync: Box<dyn SyncStrategy>,
+        notebook_name: &Notebook,
+    ) -> Result<(), NbError>;
 }

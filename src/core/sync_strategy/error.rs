@@ -13,4 +13,7 @@ pub enum SyncError {
 
     #[error("Failed to sync: {0}")]
     Sync(String),
+
+    #[error("Failed to import: {0}")]
+    Import(String),
 }

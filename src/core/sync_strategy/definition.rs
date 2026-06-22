@@ -20,5 +20,5 @@ pub trait SyncStrategy {
     where
         Self: Sized;
 
-    fn sync_import(&self, notebook_path: &str) -> Result<(), SyncError>;
+    fn sync_import(&self, notebook_path: &str) -> Result<SyncMetaInformation, SyncError>;
 }

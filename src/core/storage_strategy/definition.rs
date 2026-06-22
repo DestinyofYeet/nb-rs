@@ -90,4 +90,10 @@ pub trait StorageStrategy {
         notebook: &Notebook,
         path: &Self::StoragePathType<'a>,
     ) -> Result<PathBuf, StorageError>;
+
+    /// This function returns a path to the root of the data dir
+    fn get_root_path_on_fs(&self) -> Result<PathBuf, StorageError>;
+
+    /// This function gets all filenames in a notebook
+    fn list_files(&self, notebook: &Notebook) -> Result<Vec<String>, StorageError>;
 }

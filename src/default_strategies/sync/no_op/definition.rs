@@ -48,7 +48,7 @@ impl SyncStrategy for NoopSync {
     fn sync_import(
         &self,
         _notebook_path: &str,
-    ) -> Result<(), crate::core::sync_strategy::SyncError> {
-        Ok(())
+    ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
+        Ok(SyncMetaInformation::new())
     }
 }
