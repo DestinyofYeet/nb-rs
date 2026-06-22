@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use itertools::Itertools;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::core::{
     models::{
@@ -38,13 +37,35 @@ impl FileStorage {
 impl StorageStrategy for FileStorage {
     type StoragePathType<'a> = PathBuf;
 
-    fn list_notebooks(
-        &self,
-    ) -> Result<
-        Vec<crate::core::models::notebook::Notebook>,
-        crate::core::storage_strategy::StorageError,
-    > {
-        todo!()
+    fn list_notebooks(&self) -> Result<Vec<Notebook>, StorageError> {
+        let path = self.data_dir.clone();
+
+        let dir = std::fs::read_dir(&path)
+            .map_err(|e| StorageError::GetNotebook(format!("Failed to read directory: {e}")))?;
+
+        let mut notebooks: Vec<Notebook> = Vec::new();
+
+        for entry in dir {
+            let entry = entry
+                .map_err(|e| StorageError::ListNotebooks(format!("Failed to read entry: {e}")))?;
+
+            if entry
+                .file_type()
+                .map_err(|e| StorageError::ListNotebooks(format!("Failed to get file type: {e}")))?
+                .is_dir()
+            {
+                match self.get_notebook(entry.file_name().to_string_lossy().to_string())? {
+                    Some(value) => {
+                        notebooks.push(value);
+                    }
+                    None => {
+                        warn!("Directory {:?} is not a notebook.", entry.path())
+                    }
+                };
+            }
+        }
+
+        Ok(notebooks)
     }
 
     fn create_notebook(
@@ -74,7 +95,13 @@ impl StorageStrategy for FileStorage {
         &self,
         notebook: &Notebook,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        todo!()
+        let path = PathBuf::from(notebook.get_path());
+
+        debug!("Removing directory {path:?} and everything beneath it");
+        std::fs::remove_dir_all(&path)
+            .map_err(|e| StorageError::DeleteNotebook(format!("Failed to delete notebook: {e}")))?;
+
+        Ok(())
     }
 
     fn get_notebook(&self, name: String) -> Result<Option<Notebook>, StorageError> {
@@ -181,9 +208,9 @@ impl StorageStrategy for FileStorage {
         Ok(())
     }
 
-    fn save_note<'a>(
+    fn save_note(
         &self,
-        _notebook: &'a Notebook,
+        _notebook: &Notebook,
         note: &crate::core::models::note::Note,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
         self.save_note_meta(&PathBuf::from(note.get_path()), note.get_metadata())?;
@@ -206,13 +233,6 @@ impl StorageStrategy for FileStorage {
         let note = Note::new(maybe_path.to_str().unwrap().to_string(), notebook, meta);
 
         Ok(Some(note))
-    }
-
-    fn get_note_path_for_editor(
-        &self,
-        note: &crate::core::models::note::Note,
-    ) -> Result<std::path::PathBuf, crate::core::storage_strategy::StorageError> {
-        Ok(PathBuf::from(note.get_path()))
     }
 
     fn save_note_meta<'a>(
@@ -282,5 +302,22 @@ impl StorageStrategy for FileStorage {
         })?;
 
         Ok(meta)
+    }
+
+    fn get_path_on_fs<'a>(
+        &self,
+        notebook: &Notebook,
+        path: &Self::StoragePathType<'a>,
+    ) -> Result<PathBuf, StorageError> {
+        let mut book_path = PathBuf::from(notebook.get_path());
+        book_path.push(path);
+
+        if !book_path.exists() {
+            return Err(StorageError::PathOnFs(format!(
+                "Path {book_path:?} does not exist!"
+            )));
+        }
+
+        Ok(book_path)
     }
 }

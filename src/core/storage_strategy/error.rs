@@ -47,4 +47,7 @@ pub enum StorageError {
 
     #[error("Failed to read notebook meta: {0}")]
     ReadNotebookMeta(String),
+
+    #[error("Failed to get path on fs: {0}")]
+    PathOnFs(String),
 }

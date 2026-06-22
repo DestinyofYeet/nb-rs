@@ -1,4 +1,5 @@
 mod definition;
-pub mod meta;
+mod get_strategy;
+mod new;
 
 pub use definition::*;

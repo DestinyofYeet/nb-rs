@@ -1,4 +1,7 @@
 use clap::Subcommand;
+use nb_rs::default_strategies::sync::AvailableDefaultSyncStrategies;
+
+use crate::app::args::SyncArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum ActionArgs {
@@ -20,10 +23,10 @@ pub enum ActionArgs {
         note: String,
     },
 
-    #[command(about = "List all notes in a notebook", visible_aliases=["ls"])]
+    #[command(about = "List all notes in a notebook or all notebooks", visible_aliases=["ls"])]
     List {
         #[arg(help = "The notebook to list all notes in")]
-        notebook: String,
+        notebook: Option<String>,
     },
     #[command(about = "Delete a note or notebook", visible_aliases=["del", "rm"])]
     Delete {
@@ -32,5 +35,14 @@ pub enum ActionArgs {
 
         #[arg(help = "The filename or title of the note")]
         note: Option<String>,
+    },
+
+    #[command(about = "Setup syncing")]
+    Sync {
+        #[arg(help = "The notebook to setup tracking on")]
+        notebook: String,
+
+        #[command(subcommand)]
+        action: SyncArgs,
     },
 }

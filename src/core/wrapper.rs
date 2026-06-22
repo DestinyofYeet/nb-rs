@@ -1,17 +1,19 @@
 use std::path::PathBuf;
 
-use crate::core::{
-    Nb, NbError,
-    models::{note::Note, notebook::Notebook, notebook_meta::NotebookMetaInformation},
-    nb_wrapper::NbWrapper,
-    storage_strategy::{StorageError, StorageStrategy},
-    sync_strategy::SyncStrategy,
+use crate::{
+    core::{
+        Nb, NbError,
+        models::{note::Note, notebook::Notebook},
+        nb_wrapper::NbWrapper,
+        storage_strategy::StorageStrategy,
+        sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
+    },
+    default_strategies::sync::{AvailableDefaultSyncStrategies, git::GitSync, no_op::NoopSync},
 };
 
-impl<'n, ST, SY> NbWrapper for Nb<'n, ST, SY>
+impl<'n, ST> NbWrapper for Nb<'n, ST>
 where
     ST: StorageStrategy,
-    SY: SyncStrategy,
 {
     fn list_notebooks(&self) -> Result<Vec<Notebook>, NbError> {
         Ok(self.storage.list_notebooks()?)
@@ -42,14 +44,14 @@ where
         Ok(self.storage.get_note_by_path(notebook, &note_path.into())?)
     }
 
-    fn get_note_path_for_editor<'a>(&self, note: &Note<'a>) -> Result<PathBuf, NbError> {
-        Ok(self.storage.get_note_path_for_editor(note)?)
-    }
-
     fn save_note(&self, notebook: &Notebook, note: &Note) -> Result<(), NbError> {
         self.storage.save_note(notebook, note)?;
 
-        self.sync.sync_note(note);
+        let meta = notebook.get_meta().get_sync_information();
+
+        let sync = meta.get_strategy()?;
+
+        sync.sync_note(note)?;
 
         Ok(())
     }
@@ -70,15 +72,41 @@ where
         Ok(self.storage.delete_notebook(notebook)?)
     }
 
-    fn setup_sync(&self, notebook: &Notebook) {
-        self.sync.setup_sync(notebook);
+    fn get_path_on_fs<'a>(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, NbError> {
+        Ok(self.storage.get_path_on_fs(notebook, &path.into())?)
     }
 
-    fn remove_sync(&self, notebook: &Notebook) {
-        self.sync.remove_sync(notebook);
+    fn setup_sync(
+        &self,
+        notebook: &mut Notebook,
+        strategy: SyncMetaInformation,
+    ) -> Result<(), NbError> {
+        {
+            notebook.get_meta_mut().set_sync_meta(strategy);
+        }
+
+        self.storage
+            .save_notebook_meta(&notebook.get_path().into(), notebook.get_meta())?;
+
+        Ok(())
     }
 
-    fn sync_note(&self, note: &Note) {
-        self.sync.sync_note(note);
+    fn remove_sync(&self, notebook: &mut Notebook) -> Result<(), NbError> {
+        let old_strat = notebook.get_meta().get_sync_information().get_strategy()?;
+        old_strat.remove_sync(notebook)?;
+
+        let strat = NoopSync {}.setup_sync(notebook)?;
+        notebook.get_meta_mut().set_sync_meta(strat);
+
+        self.storage
+            .save_notebook_meta(&notebook.get_path().into(), notebook.get_meta())?;
+        Ok(())
+    }
+
+    fn sync_note(&self, note: &Note) -> Result<(), NbError> {
+        let meta = note.get_notebook().get_meta();
+        let sync = meta.get_sync_information().get_strategy()?;
+        sync.sync_note(note)?;
+        Ok(())
     }
 }

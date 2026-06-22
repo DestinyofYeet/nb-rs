@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct Attachment {
     /// The name of the attachment.
     /// This should be unique
-    name: String,
+    pub(super) name: String,
+
     /// The path of the attachment in the Notebook
-    path: String,
+    pub(super) path: String,
 }

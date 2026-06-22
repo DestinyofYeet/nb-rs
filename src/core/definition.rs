@@ -1,26 +1,22 @@
 use std::marker::PhantomData;
 
-use crate::core::{storage_strategy::StorageStrategy, sync_strategy::SyncStrategy};
+use crate::core::storage_strategy::StorageStrategy;
 
-pub struct Nb<'a, ST, SY>
+pub struct Nb<'a, ST>
 where
     ST: StorageStrategy,
-    SY: SyncStrategy,
 {
     pub(super) storage: ST,
-    pub(super) sync: SY,
     _m: PhantomData<&'a ST>,
 }
 
-impl<'a, ST, SY> Nb<'a, ST, SY>
+impl<'a, ST> Nb<'a, ST>
 where
     ST: StorageStrategy,
-    SY: SyncStrategy,
 {
-    pub fn new(storage: ST, sync: SY) -> Self {
+    pub fn new(storage: ST) -> Self {
         Self {
             storage,
-            sync,
             _m: PhantomData,
         }
     }

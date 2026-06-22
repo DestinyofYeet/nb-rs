@@ -84,7 +84,10 @@ pub trait StorageStrategy {
     /// This function saves a note, after it was modified by the editor
     fn save_note(&self, notebook: &Notebook, note: &Note) -> Result<(), StorageError>;
 
-    /// This function returns the path for the note on the local filesystems.
-    /// This will be used to open the editor.
-    fn get_note_path_for_editor(&self, note: &Note) -> Result<PathBuf, StorageError>;
+    /// This function returns a path on the local filesystem
+    fn get_path_on_fs<'a>(
+        &self,
+        notebook: &Notebook,
+        path: &Self::StoragePathType<'a>,
+    ) -> Result<PathBuf, StorageError>;
 }

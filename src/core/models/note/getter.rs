@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::core::models::{note::Note, note_meta::NoteMetaInformation};
+use crate::core::models::{note::Note, note_meta::NoteMetaInformation, notebook::Notebook};
 
 impl<'a> Note<'a> {
     pub fn get_path(&self) -> &str {
@@ -9,6 +9,10 @@ impl<'a> Note<'a> {
 
     pub fn get_title(&self) -> &str {
         &self.meta.title
+    }
+
+    pub fn get_notebook(&self) -> &Notebook {
+        self.notebook
     }
 
     pub fn get_metadata(&self) -> &NoteMetaInformation {

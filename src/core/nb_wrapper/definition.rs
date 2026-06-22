@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::core::{
     NbError,
     models::{note::Note, notebook::Notebook},
+    sync_strategy::meta::SyncMetaInformation,
 };
 
 pub trait NbWrapper {
@@ -24,8 +25,6 @@ pub trait NbWrapper {
         note_path: &'a str,
     ) -> Result<Option<Note<'a>>, NbError>;
 
-    fn get_note_path_for_editor<'a>(&self, note: &Note<'a>) -> Result<PathBuf, NbError>;
-
     fn save_note(&self, notebook: &Notebook, note: &Note) -> Result<(), NbError>;
 
     fn list_notes<'a>(&self, notebook: &'a Notebook) -> Result<Vec<Note<'a>>, NbError>;
@@ -36,8 +35,12 @@ pub trait NbWrapper {
         note_path: &'a str,
     ) -> Result<(), NbError>;
 
-    fn setup_sync(&self, notebook: &Notebook);
-    fn remove_sync(&self, notebook: &Notebook);
+    fn get_path_on_fs(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, NbError>;
 
-    fn sync_note(&self, note: &Note);
+    fn setup_sync(&self, notebook: &mut Notebook, sync: SyncMetaInformation)
+    -> Result<(), NbError>;
+
+    fn remove_sync(&self, notebook: &mut Notebook) -> Result<(), NbError>;
+
+    fn sync_note(&self, note: &Note) -> Result<(), NbError>;
 }

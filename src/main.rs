@@ -5,14 +5,20 @@ use colored::Colorize;
 use inquire::{Confirm, CustomType, Select};
 use itertools::Itertools;
 use nb_rs::{
-    core::{Nb, nb_wrapper::NbWrapper},
-    default_strategies::{storage::file_storage::FileStorage, sync::git::GitSync},
+    core::{Nb, nb_wrapper::NbWrapper, sync_strategy::SyncStrategy},
+    default_strategies::{
+        storage::file_storage::FileStorage,
+        sync::{
+            AvailableDefaultSyncStrategies,
+            git::{GitSync, meta::GitSyncMeta},
+        },
+    },
 };
 use tracing::{debug, trace};
 use tracing_subscriber::EnvFilter;
 
 use crate::app::{
-    args::{ActionArgs, Args},
+    args::{ActionArgs, Args, SyncArgs},
     config::Config,
 };
 
@@ -65,8 +71,7 @@ pub fn main() -> anyhow::Result<()> {
 
     debug!("data_dir: {:?}", config.data_dir);
 
-    let nb: Box<dyn NbWrapper> = Box::new(Nb::new(FileStorage::new(config.data_dir)?, GitSync {}));
-    // let nb = Box::leak(nb);
+    let nb: Box<dyn NbWrapper> = Box::new(Nb::new(FileStorage::new(config.data_dir)?));
 
     match args.action {
         ActionArgs::Create { notebook, note } => {
@@ -169,7 +174,7 @@ pub fn main() -> anyhow::Result<()> {
                 }
             };
 
-            let note_path = nb.get_note_path_for_editor(&note)?;
+            let note_path = nb.get_path_on_fs(&notebook, &note.get_file_name())?;
 
             let old_modified = {
                 let file = File::open(&note_path)?;
@@ -201,43 +206,64 @@ pub fn main() -> anyhow::Result<()> {
             }
         }
 
-        ActionArgs::List { notebook } => {
-            let notebook = match nb.get_notebook(notebook.clone())? {
-                Some(value) => value,
-                None => {
-                    return Err(anyhow::format_err!(
-                        "No notebook found with name {}",
-                        notebook.blue()
-                    ));
-                }
-            };
+        ActionArgs::List { notebook } => match notebook {
+            None => {
+                let notebooks = nb.list_notebooks()?;
+                match notebooks.len() {
+                    0 => {
+                        println!("No notebooks found.")
+                    }
 
-            let notes = nb.list_notes(&notebook)?;
-
-            match notes.len() {
-                0 => {
-                    println!(
-                        "There are no notes in the notebook {}",
-                        notebook.get_name().blue()
-                    );
-                }
-
-                _ => {
-                    println!(
-                        "Following notes are in the notebook {}:\n{}",
-                        notebook.get_name().blue(),
-                        notes
-                            .iter()
-                            .map(|note| format!(
-                                "- {} {}",
-                                note.get_title().blue(),
-                                format!("({})", note.get_file_name()).white()
-                            ))
-                            .join("\n")
-                    );
+                    _ => {
+                        println!(
+                            "Following notebooks:\n{}",
+                            notebooks
+                                .iter()
+                                .map(|book| book.get_name().blue())
+                                .join("\n")
+                        )
+                    }
                 }
             }
-        }
+
+            Some(notebook) => {
+                let notebook = match nb.get_notebook(notebook.clone())? {
+                    Some(value) => value,
+                    None => {
+                        return Err(anyhow::format_err!(
+                            "No notebook found with name {}",
+                            notebook.blue()
+                        ));
+                    }
+                };
+
+                let notes = nb.list_notes(&notebook)?;
+
+                match notes.len() {
+                    0 => {
+                        println!(
+                            "There are no notes in the notebook {}",
+                            notebook.get_name().blue()
+                        );
+                    }
+
+                    _ => {
+                        println!(
+                            "Following notes are in the notebook {}:\n{}",
+                            notebook.get_name().blue(),
+                            notes
+                                .iter()
+                                .map(|note| format!(
+                                    "- {} {}",
+                                    note.get_title().blue(),
+                                    format!("({})", note.get_file_name()).white()
+                                ))
+                                .join("\n")
+                        );
+                    }
+                }
+            }
+        },
 
         ActionArgs::Delete { notebook, note } => {
             let mut notebook = match nb.get_notebook(notebook.clone())? {
@@ -294,6 +320,73 @@ pub fn main() -> anyhow::Result<()> {
                     nb.delete_note(&mut notebook, &path)?;
 
                     println!("{}", "Deleted".green());
+                }
+            }
+        }
+        ActionArgs::Sync { notebook, action } => {
+            let mut notebook = match nb.get_notebook(notebook.clone())? {
+                Some(value) => value,
+                None => {
+                    println!("Notebook {} not found.", notebook.blue());
+                    return Ok(());
+                }
+            };
+
+            match action {
+                SyncArgs::Setup { kind } => {
+                    if !Confirm::new(&format!(
+                        "Setup {} tracking on notebook {}?",
+                        kind.to_string().blue(),
+                        notebook.get_name().blue()
+                    ))
+                    .prompt()?
+                    {
+                        println!("{}", "Cancelled".red());
+                        return Ok(());
+                    }
+
+                    let meta = match kind {
+                        AvailableDefaultSyncStrategies::Git => {
+                            let repo_url = CustomType::<String>::new("Repo url:").prompt()?;
+                            let branch = CustomType::<String>::new("Branch:").prompt()?;
+
+                            if !Confirm::new(&format!(
+                                "Setup git tracking on {} at branch {}?",
+                                repo_url.blue(),
+                                branch.blue()
+                            ))
+                            .prompt()?
+                            {
+                                println!("{}", "Cancelled".red());
+                                return Ok(());
+                            }
+
+                            let git_meta = GitSyncMeta::new(repo_url, branch);
+
+                            let git_sync = GitSync::new(git_meta);
+
+                            git_sync.setup_sync(&notebook)?
+                        }
+                    };
+
+                    nb.setup_sync(&mut notebook, meta)?;
+                    println!("{}", "Success".green());
+                }
+
+                SyncArgs::Rm {} => {
+                    if !Confirm::new(&format!(
+                        "Remove tracking on notebook {}?",
+                        notebook.get_name().blue()
+                    ))
+                    .prompt()?
+                    {
+                        println!("{}", "Cancelled".red());
+                        return Ok(());
+                    }
+
+                    nb.remove_sync(&mut notebook)?;
+
+                    println!("{}", "Success".green());
                 }
             }
         }
