@@ -411,8 +411,8 @@ pub fn main() -> anyhow::Result<()> {
                     let sync: Box<dyn SyncStrategy> = match kind {
                         AvailableDefaultSyncStrategies::Git => {
                             let repo_url =
-                                Custom::<String>::new("Import from git url:").prompt()?;
-                            let branch = Custom::<String>::new("Import branch:").prompt()?;
+                                CustomType::<String>::new("Import from git url:").prompt()?;
+                            let branch = CustomType::<String>::new("Import branch:").prompt()?;
 
                             if !Confirm::new(&format!(
                                 "Import git repositry from url {} at branch {}?",
@@ -431,7 +431,7 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     };
 
-                    nb.sync_import(sync, notebook_name)?;
+                    nb.sync_import(sync, &notebook)?;
 
                     println!("{}", "Done".green());
                 }
