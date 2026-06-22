@@ -1,6 +1,9 @@
 use std::{fs::File, process::Command};
 
-use clap::{CommandFactory, FromArgMatches, error::ErrorKind};
+use clap::{
+    CommandFactory, FromArgMatches,
+    error::{ContextKind::Custom, ErrorKind},
+};
 use colored::Colorize;
 use inquire::{Confirm, CustomType, Select};
 use itertools::Itertools;
@@ -392,6 +395,43 @@ pub fn main() -> anyhow::Result<()> {
                 SyncArgs::Manual {} => {
                     println!("Manually syncing {}", notebook.get_name().blue());
                     nb.sync_manual(&notebook)?;
+
+                    println!("{}", "Done".green());
+                }
+
+                SyncArgs::Import { kind, notebook } => {
+                    if nb.get_notebook(notebook.clone())?.is_some() {
+                        println!(
+                            "The notebook {} exists. Please choose a new name.",
+                            notebook.blue()
+                        );
+                        return Ok(());
+                    }
+
+                    let sync: Box<dyn SyncStrategy> = match kind {
+                        AvailableDefaultSyncStrategies::Git => {
+                            let repo_url =
+                                Custom::<String>::new("Import from git url:").prompt()?;
+                            let branch = Custom::<String>::new("Import branch:").prompt()?;
+
+                            if !Confirm::new(&format!(
+                                "Import git repositry from url {} at branch {}?",
+                                repo_url.blue(),
+                                branch.blue()
+                            ))
+                            .prompt()?
+                            {
+                                println!("{}", "Cancelled".red());
+                                return Ok(());
+                            }
+
+                            let sync = GitSync::new(GitSyncMeta::new(repo_url, branch));
+
+                            Box::new(sync)
+                        }
+                    };
+
+                    nb.sync_import(sync, notebook_name)?;
 
                     println!("{}", "Done".green());
                 }

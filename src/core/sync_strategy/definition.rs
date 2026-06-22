@@ -19,4 +19,6 @@ pub trait SyncStrategy {
     fn from_metadata(metadata: &SyncMetaInformation) -> Self
     where
         Self: Sized;
+
+    fn sync_import(&self, notebook_path: &str) -> Result<(), SyncError>;
 }

@@ -41,7 +41,7 @@ impl GitSync {
         Self { meta }
     }
 
-    pub fn run_git_command(&self, git_command: GitCommand) -> Result<(), SyncError> {
+    fn run_git_command(&self, git_command: GitCommand) -> Result<(), SyncError> {
         let mut command = Command::new("git");
 
         command
@@ -180,5 +180,9 @@ impl SyncStrategy for GitSync {
         self.run_git_command(GitCommand::new(path, &["push"]))?;
 
         Ok(())
+    }
+
+    fn sync_import(&self, notebook_path: &str) -> Result<(), SyncError> {
+        todo!()
     }
 }

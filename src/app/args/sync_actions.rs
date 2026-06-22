@@ -14,4 +14,13 @@ pub enum SyncArgs {
 
     #[command(about = "Manual sync")]
     Manual {},
+
+    #[command(about = "Import remote notebook")]
+    Import {
+        #[arg(help = "The notebook to import to")]
+        notebook: String,
+
+        #[arg(help = "The kind of tracking")]
+        kind: AvailableDefaultSyncStrategies,
+    },
 }

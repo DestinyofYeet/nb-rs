@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::core::{
     NbError,
     models::{note::Note, notebook::Notebook},
-    sync_strategy::meta::SyncMetaInformation,
+    sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
 };
 
 pub trait NbWrapper {
@@ -44,4 +44,6 @@ pub trait NbWrapper {
 
     fn sync_note(&self, note: &Note) -> Result<(), NbError>;
     fn sync_manual(&self, notebook: &Notebook) -> Result<(), NbError>;
+
+    fn sync_import(&self, sync: Box<dyn SyncStrategy>, notebook_name: &str) -> Result<(), NbError>;
 }

@@ -120,4 +120,10 @@ where
 
         Ok(())
     }
+
+    fn sync_import(&self, sync: Box<dyn SyncStrategy>, notebook_name: &str) -> Result<(), NbError> {
+        // let path = self.storage.get_path_on_fs(notebook, path)
+        // sync.sync_import()
+        Ok(())
+    }
 }
