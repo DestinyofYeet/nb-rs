@@ -92,6 +92,7 @@ impl SyncStrategy for GitSync {
             path.into(),
             &["switch", "-c", &self.meta.branch],
         ))?;
+
         self.run_git_command(GitCommand::new(path.into(), &["add", "-A"]))?;
         self.run_git_command(
             GitCommand::new(path.into(), &["commit", "-m", "Init"]).set_failable(true),
@@ -132,6 +133,7 @@ impl SyncStrategy for GitSync {
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         let notebook_path = PathBuf::from(note.get_notebook().get_path());
         let notebook_path = notebook_path.to_str().expect("to get path");
+        let note_name = note.get_file_name();
 
         let mut files = note
             .get_metadata()
@@ -150,6 +152,7 @@ impl SyncStrategy for GitSync {
         let files: Vec<&str> = {
             let mut vec = Vec::new();
             vec.push("add");
+            vec.push(&note_name);
 
             vec.append(&mut files);
             vec
