@@ -12,8 +12,8 @@ pub enum SyncArgs {
     #[command(about = "Remove sync")]
     Rm {},
 
-    #[command(about = "Manual sync")]
-    Manual {},
+    #[command(about = "Full sync")]
+    Full {},
 
     #[command(about = "Import remote notebook")]
     Import {

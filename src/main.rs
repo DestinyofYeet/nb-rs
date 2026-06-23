@@ -1,8 +1,6 @@
-use std::{fs::File, process::Command};
-
 use clap::{CommandFactory, FromArgMatches, error::ErrorKind};
 use colored::Colorize;
-use inquire::{Confirm, CustomType, Select};
+use inquire::{Confirm, CustomType};
 use itertools::Itertools;
 use nb_rs::{
     core::{Nb, sync_strategy::SyncStrategy},
@@ -105,7 +103,7 @@ pub fn main() -> anyhow::Result<()> {
                         return Ok(());
                     }
 
-                    nb.create_note(&mut notebook, title.clone(), &note)?;
+                    nb.create_note(&mut notebook, title.clone(), &note, config.no_sync)?;
 
                     println!(
                         "Created note {} with title {} in notebook {}.",
@@ -113,6 +111,13 @@ pub fn main() -> anyhow::Result<()> {
                         title.blue(),
                         notebook.get_name().blue()
                     );
+
+                    nb.interactive_open_note_for_edit(
+                        &notebook,
+                        &note,
+                        &config.editor_cmd,
+                        config.no_sync,
+                    )?;
                 }
 
                 None => {
@@ -138,72 +143,12 @@ pub fn main() -> anyhow::Result<()> {
                 }
             };
 
-            let note = match nb.get_note(&notebook, &note)? {
-                Some(note) => note,
-                None => {
-                    let mut notes = nb.list_notes(&notebook)?;
-                    notes.retain(|e| e.get_title().to_lowercase().contains(&note.to_lowercase()));
-
-                    match notes.len() {
-                        0 => {
-                            return Err(anyhow::format_err!("No notes found with {}", note.blue()));
-                        }
-
-                        1 => notes.pop().unwrap(),
-
-                        _ => {
-                            let notes_string = notes.iter().map(|e| e.get_title()).collect_vec();
-
-                            let note_selection =
-                                Select::new("Select a note:", notes_string).prompt()?;
-
-                            let note = match notes.iter().find(|e| e.get_title() == note_selection)
-                            {
-                                Some(note) => note,
-                                None => {
-                                    return Err(anyhow::format_err!(
-                                        "Failed to find note {}",
-                                        note_selection.blue()
-                                    ));
-                                }
-                            };
-
-                            note.clone()
-                        }
-                    }
-                }
-            };
-
-            let note_path = nb.get_path_on_fs(&notebook, &note.get_file_name())?;
-
-            let old_modified = {
-                let file = File::open(&note_path)?;
-                let modified = file.metadata()?.modified()?;
-                drop(file);
-                modified
-            };
-
-            let mut editor_process = Command::new(config.editor_cmd);
-            editor_process.arg(&note_path);
-
-            debug!(
-                "Executing {:?} with args {:?}",
-                editor_process.get_program(),
-                editor_process.get_args()
-            );
-
-            editor_process.status()?;
-
-            let new_modified = {
-                let file = File::open(&note_path)?;
-                let modified = file.metadata()?.modified()?;
-                drop(file);
-                modified
-            };
-
-            if new_modified != old_modified {
-                nb.save_note(&note, config.no_sync)?;
-            }
+            nb.interactive_open_note_for_edit(
+                &notebook,
+                &note,
+                &config.editor_cmd,
+                config.no_sync,
+            )?;
         }
 
         ActionArgs::List { notebook } => match notebook {
@@ -302,7 +247,7 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     };
 
-                    let path = note.get_path().to_string();
+                    let path = note.get_file_name();
 
                     if !Confirm::new(&format!(
                         "Delete note {} in notebook {}",
@@ -317,7 +262,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     drop(note);
 
-                    nb.delete_note(&mut notebook, &path)?;
+                    nb.delete_note(&mut notebook, &path, config.no_sync)?;
 
                     println!("{}", "Deleted".green());
                 }
@@ -397,7 +342,7 @@ pub fn main() -> anyhow::Result<()> {
                     println!("{}", "Success".green());
                 }
 
-                SyncArgs::Manual {} => {
+                SyncArgs::Full {} => {
                     println!("Manually syncing {}", notebook.get_name().blue());
                     nb.sync_manual(&notebook)?;
 

@@ -1,7 +1,7 @@
 use crate::core::{
     models::{note::Note, notebook::Notebook},
     storage_strategy::StorageStrategy,
-    sync_strategy::{SyncError, meta::SyncMetaInformation},
+    sync_strategy::{SyncError, meta::SyncMetaInformation, sync_kind::SyncKind},
 };
 
 pub trait SyncStrategy {
@@ -21,9 +21,14 @@ pub trait SyncStrategy {
         storage: &dyn StorageStrategy,
     ) -> Result<(), SyncError>;
 
-    fn sync_note(&self, note: &Note, storage: &dyn StorageStrategy) -> Result<(), SyncError>;
+    fn sync_note(
+        &self,
+        note: &Note,
+        storage: &dyn StorageStrategy,
+        kind: SyncKind,
+    ) -> Result<(), SyncError>;
 
-    fn sync_manual(
+    fn sync_full(
         &self,
         notebook: &Notebook,
         storage: &dyn StorageStrategy,

@@ -92,9 +92,9 @@ pub trait StorageStrategy {
     /// This function gets all filenames in a notebook
     fn list_files(&self, notebook: &Notebook) -> Result<Vec<String>, StorageError>;
 
-    // /// Returns the path of the metadata file in the notebook
-    // fn get_notebook_metadata_file(&self, notebook: &Notebook) -> Result<PathBuf, StorageError>;
+    /// Returns the path of the metadata file in the notebook
+    fn get_notebook_metadata_file(&self, notebook: &Notebook) -> Result<PathBuf, StorageError>;
 
-    // /// Returns the path of the metadata file in the note
-    // fn get_note_metadata_file(&self, note: &Note) -> Result<PathBuf, StorageError>;
+    /// Returns the path of the metadata file in the note
+    fn get_note_metadata_file(&self, note: &Note) -> Result<PathBuf, StorageError>;
 }

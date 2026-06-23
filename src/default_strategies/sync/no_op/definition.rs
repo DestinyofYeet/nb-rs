@@ -1,6 +1,6 @@
 use crate::core::{
     storage_strategy::StorageStrategy,
-    sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
+    sync_strategy::{SyncStrategy, meta::SyncMetaInformation, sync_kind::SyncKind},
 };
 
 pub struct NoopSync {}
@@ -26,6 +26,7 @@ impl SyncStrategy for NoopSync {
         &self,
         _note: &crate::core::models::note::Note,
         _storage: &dyn StorageStrategy,
+        _kind: SyncKind,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         Ok(())
     }
@@ -47,7 +48,7 @@ impl SyncStrategy for NoopSync {
         "no_op"
     }
 
-    fn sync_manual(
+    fn sync_full(
         &self,
         _notebook: &crate::core::models::notebook::Notebook,
         _storage: &dyn StorageStrategy,

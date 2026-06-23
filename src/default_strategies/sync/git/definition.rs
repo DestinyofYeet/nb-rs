@@ -9,7 +9,7 @@ use tracing::debug;
 use crate::{
     core::{
         storage_strategy::StorageStrategy,
-        sync_strategy::{SyncError, SyncStrategy, meta::SyncMetaInformation},
+        sync_strategy::{SyncError, SyncStrategy, meta::SyncMetaInformation, sync_kind::SyncKind},
     },
     default_strategies::sync::git::meta::GitSyncMeta,
 };
@@ -80,7 +80,7 @@ impl SyncStrategy for GitSync {
     fn setup_sync(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
-        storage: &dyn StorageStrategy,
+        _storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         let path = notebook.get_path();
         self.run_git_command(GitCommand::new(
@@ -99,7 +99,7 @@ impl SyncStrategy for GitSync {
 
         self.run_git_command(GitCommand::new(path.into(), &["add", "-A"]))?;
         self.run_git_command(
-            GitCommand::new(path.into(), &["commit", "-m", "Init"]).set_failable(true),
+            GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Init"]).set_failable(true),
         )?;
 
         // maybe can fail
@@ -120,7 +120,7 @@ impl SyncStrategy for GitSync {
     fn remove_sync(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
-        storage: &dyn StorageStrategy,
+        _storage: &dyn StorageStrategy,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         let mut path = PathBuf::from(notebook.get_path());
         path.push(".git");
@@ -136,10 +136,27 @@ impl SyncStrategy for GitSync {
         &self,
         note: &crate::core::models::note::Note,
         storage: &dyn StorageStrategy,
+        kind: SyncKind,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         let notebook_path = PathBuf::from(note.get_notebook().get_path());
         let notebook_path = notebook_path.to_str().expect("to get path");
         let note_name = note.get_file_name();
+
+        let note_meta = storage
+            .get_note_metadata_file(note)
+            .map_err(|e| SyncError::Sync(format!("Failed to find metadata: {e}")))?;
+
+        let note_meta_file = note_meta.file_name().expect("to have a base name");
+        let note_meta_file_path = note_meta_file.to_string_lossy();
+
+        let notebook_meta = storage
+            .get_notebook_metadata_file(note.get_notebook())
+            .map_err(|e| SyncError::Sync(format!("Failed to get notebook meta: {e}")))?;
+
+        let notebook_meta_path = notebook_meta
+            .file_name()
+            .expect("to have a filename")
+            .to_string_lossy();
 
         let mut files = note
             .get_metadata()
@@ -148,23 +165,48 @@ impl SyncStrategy for GitSync {
             .map(|e| e.get_path())
             .collect_vec();
 
-        let files_string = note
-            .get_metadata()
-            .attachments
-            .iter()
-            .map(|e| e.get_name())
-            .join(", ");
+        let commit_msg = files.iter().join(", ");
 
-        let files: Vec<&str> = {
-            let mut vec = Vec::new();
-            vec.push("add");
-            vec.push(&note_name);
+        files.push(&note_name);
+        files.push(&note_meta_file_path);
 
-            vec.append(&mut files);
-            vec
+        if matches!(kind, SyncKind::Create) {
+            files.push(&notebook_meta_path);
+        }
+
+        let commit_string = match kind {
+            SyncKind::Create => "Create",
+            SyncKind::Edit => "Edit",
+            SyncKind::Delete => "Delete",
         };
 
-        self.run_git_command(GitCommand::new(notebook_path.into(), &files))?;
+        match kind {
+            SyncKind::Create | SyncKind::Edit => {
+                let args: Vec<&str> = {
+                    let mut vec = Vec::new();
+                    vec.push("add");
+
+                    vec.append(&mut files);
+                    vec
+                };
+
+                self.run_git_command(GitCommand::new(notebook_path.into(), &args))?;
+            }
+
+            SyncKind::Delete => {
+                let args: Vec<&str> = {
+                    let mut vec = Vec::new();
+                    vec.push("rm");
+                    vec.push("--cached");
+
+                    vec.append(&mut files);
+                    vec
+                };
+
+                self.run_git_command(GitCommand::new(notebook_path.into(), &args))?;
+            }
+        }
+
         self.run_git_command(
             GitCommand::new(
                 notebook_path.into(),
@@ -172,10 +214,10 @@ impl SyncStrategy for GitSync {
                     "commit",
                     "-m",
                     &format!(
-                        "Edit: {}{}{}",
+                        "[nb-rs] {commit_string}: {}{}{}",
                         note.get_title(),
-                        if !files_string.is_empty() { " | " } else { "" },
-                        files_string
+                        if !commit_msg.is_empty() { " | " } else { "" },
+                        commit_msg
                     ),
                 ],
             )
@@ -188,7 +230,7 @@ impl SyncStrategy for GitSync {
 
     fn from_metadata(
         metadata: &crate::core::sync_strategy::meta::SyncMetaInformation,
-        storage: &dyn StorageStrategy,
+        _storage: &dyn StorageStrategy,
     ) -> Self {
         let meta: GitSyncMeta =
             serde_json::from_value(metadata.data.clone()).expect("to read back meta");
@@ -200,17 +242,58 @@ impl SyncStrategy for GitSync {
         "git"
     }
 
-    fn sync_manual(
+    fn sync_full(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
         storage: &dyn StorageStrategy,
     ) -> Result<(), SyncError> {
         let path = notebook.get_path();
 
+        let files: Vec<String> = {
+            let mut vec = Vec::new();
+
+            for note in storage
+                .list_notes(notebook)
+                .map_err(|e| SyncError::Sync(format!("Failed to list files: {e}")))?
+            {
+                vec.push(note.get_file_name());
+
+                for attachment in &note.get_metadata().attachments {
+                    vec.push(attachment.get_path().to_string());
+                }
+            }
+
+            let notebook_meta = storage
+                .get_notebook_metadata_file(notebook)
+                .map_err(|e| SyncError::Sync(format!("Failed to get notebook meta: {e}")))?;
+
+            vec.push(
+                notebook_meta
+                    .file_name()
+                    .expect("to get filename")
+                    .to_string_lossy()
+                    .to_string(),
+            );
+
+            vec
+        };
+
+        let args = {
+            let mut vec = Vec::new();
+            vec.push("add");
+
+            for file in files.iter() {
+                vec.push(file);
+            }
+
+            vec
+        };
+
         self.run_git_command(GitCommand::new(path.into(), &["pull"]))?;
-        self.run_git_command(GitCommand::new(path.into(), &["add", "-A"]))?;
+        self.run_git_command(GitCommand::new(path.into(), &args))?;
         self.run_git_command(
-            GitCommand::new(path.into(), &["commit", "-m", "Manual sync"]).set_failable(true),
+            GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Manual sync"])
+                .set_failable(true),
         )?;
         self.run_git_command(GitCommand::new(path.into(), &["push"]))?;
 
@@ -220,7 +303,7 @@ impl SyncStrategy for GitSync {
     fn sync_import(
         &self,
         notebook_path: &str,
-        storage: &dyn StorageStrategy,
+        _storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, SyncError> {
         std::fs::remove_dir_all(notebook_path)
             .map_err(|e| SyncError::Import(format!("Failed to remove notebook: {e}")))?;

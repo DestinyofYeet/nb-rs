@@ -7,7 +7,7 @@ use crate::{
             note::Note, note_meta::NoteMetaInformation, notebook::Notebook,
             notebook_meta::NotebookMetaInformation,
         },
-        sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
+        sync_strategy::{SyncStrategy, meta::SyncMetaInformation, sync_kind::SyncKind},
     },
     default_strategies::sync::no_op::NoopSync,
 };
@@ -30,7 +30,7 @@ impl Nb {
             .get_sync_information()
             .get_strategy(&*self.storage)?;
 
-        meta.sync_manual(notebook, &*self.storage)?;
+        meta.sync_full(notebook, &*self.storage)?;
 
         Ok(())
     }
@@ -53,7 +53,7 @@ impl Nb {
     pub fn sync_note(&self, note: &Note) -> Result<(), NbError> {
         let meta = note.get_notebook().get_meta();
         let sync = meta.get_sync_information().get_strategy(&*self.storage)?;
-        sync.sync_note(note, &*self.storage)?;
+        sync.sync_note(note, &*self.storage, SyncKind::Edit)?;
         Ok(())
     }
 
@@ -62,7 +62,7 @@ impl Nb {
             .get_meta()
             .get_sync_information()
             .get_strategy(&*self.storage)?;
-        sync.sync_manual(notebook, &*self.storage)?;
+        sync.sync_full(notebook, &*self.storage)?;
 
         Ok(())
     }
