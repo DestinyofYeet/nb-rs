@@ -79,6 +79,12 @@ impl Nb {
         let mut book_meta = NotebookMetaInformation::new();
         book_meta.set_sync_meta(meta);
 
+        if self.storage.read_notebook_meta(notebook.get_path()).is_ok() {
+            // assume initialized
+            return Ok(());
+        }
+        // Best effort implementation. Import every file that is in the top level
+
         for file in self.storage.list_files(notebook)? {
             book_meta.add_note(file.clone());
 
