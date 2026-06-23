@@ -1,5 +1,4 @@
 use clap::Subcommand;
-use nb_rs::default_strategies::sync::AvailableDefaultSyncStrategies;
 
 use crate::app::args::SyncArgs;
 
