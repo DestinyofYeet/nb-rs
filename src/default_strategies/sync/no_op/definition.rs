@@ -1,4 +1,7 @@
-use crate::core::sync_strategy::{SyncStrategy, meta::SyncMetaInformation};
+use crate::core::{
+    storage_strategy::StorageStrategy,
+    sync_strategy::{SyncStrategy, meta::SyncMetaInformation},
+};
 
 pub struct NoopSync {}
 
@@ -6,6 +9,7 @@ impl SyncStrategy for NoopSync {
     fn setup_sync(
         &self,
         _notebook: &crate::core::models::notebook::Notebook,
+        _storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         Ok(SyncMetaInformation::new())
     }
@@ -13,6 +17,7 @@ impl SyncStrategy for NoopSync {
     fn remove_sync(
         &self,
         _notebook: &crate::core::models::notebook::Notebook,
+        _storage: &dyn StorageStrategy,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         Ok(())
     }
@@ -20,11 +25,15 @@ impl SyncStrategy for NoopSync {
     fn sync_note(
         &self,
         _note: &crate::core::models::note::Note,
+        _storage: &dyn StorageStrategy,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         Ok(())
     }
 
-    fn from_metadata(_metadata: &crate::core::sync_strategy::meta::SyncMetaInformation) -> Self
+    fn from_metadata(
+        _metadata: &crate::core::sync_strategy::meta::SyncMetaInformation,
+        _storage: &dyn StorageStrategy,
+    ) -> Self
     where
         Self: Sized,
     {
@@ -41,6 +50,7 @@ impl SyncStrategy for NoopSync {
     fn sync_manual(
         &self,
         _notebook: &crate::core::models::notebook::Notebook,
+        _storage: &dyn StorageStrategy,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         Ok(())
     }
@@ -48,6 +58,7 @@ impl SyncStrategy for NoopSync {
     fn sync_import(
         &self,
         _notebook_path: &str,
+        _storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         Ok(SyncMetaInformation::new())
     }

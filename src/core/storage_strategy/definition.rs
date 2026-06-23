@@ -9,19 +9,17 @@ use crate::core::{
 };
 
 pub trait StorageStrategy {
-    type StoragePathType<'a>: From<&'a str>;
-
     /// This function saves notebook metainformation
     fn save_notebook_meta<'a>(
         &self,
-        notebook_path: &Self::StoragePathType<'a>,
+        notebook_path: &str,
         meta: &NotebookMetaInformation,
     ) -> Result<(), StorageError>;
 
     /// This function reads notebook metainformation
     fn read_notebook_meta<'a>(
         &self,
-        notebook_path: &Self::StoragePathType<'a>,
+        notebook_path: &str,
     ) -> Result<NotebookMetaInformation, StorageError>;
 
     /// This function lists all available notebooks
@@ -50,46 +48,39 @@ pub trait StorageStrategy {
     fn get_note_by_path<'a>(
         &self,
         notebook: &'a Notebook,
-        note_path: &Self::StoragePathType<'a>,
+        note_path: &str,
     ) -> Result<Option<Note<'a>>, StorageError>;
 
     /// This function saves note metainformation
     fn save_note_meta<'a>(
         &self,
-        note_path: &Self::StoragePathType<'a>,
+        note_path: &str,
         meta: &NoteMetaInformation,
     ) -> Result<(), StorageError>;
 
     /// This function reads note metainformation
-    fn read_note_meta<'a>(
-        &self,
-        note_path: &Self::StoragePathType<'a>,
-    ) -> Result<NoteMetaInformation, StorageError>;
+    fn read_note_meta<'a>(&self, note_path: &str) -> Result<NoteMetaInformation, StorageError>;
 
     /// This function creates a note
     fn create_note<'a>(
         &self,
         notebook: &'a mut Notebook,
         title: String,
-        path: &Self::StoragePathType<'a>,
+        path: &str,
     ) -> Result<(), StorageError>;
 
     /// This function deletes a note
     fn delete_note<'a>(
         &self,
         notebook: &'a mut Notebook,
-        note_path: &Self::StoragePathType<'a>,
+        note_path: &str,
     ) -> Result<(), StorageError>;
 
     /// This function saves a note, after it was modified by the editor
     fn save_note(&self, notebook: &Notebook, note: &Note) -> Result<(), StorageError>;
 
     /// This function returns a path on the local filesystem
-    fn get_path_on_fs<'a>(
-        &self,
-        notebook: &Notebook,
-        path: &Self::StoragePathType<'a>,
-    ) -> Result<PathBuf, StorageError>;
+    fn get_path_on_fs<'a>(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, StorageError>;
 
     /// This function returns a path to the root of the data dir
     fn get_root_path_on_fs(&self) -> Result<PathBuf, StorageError>;

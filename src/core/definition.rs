@@ -2,22 +2,17 @@ use std::marker::PhantomData;
 
 use crate::core::storage_strategy::StorageStrategy;
 
-pub struct Nb<'a, ST>
-where
-    ST: StorageStrategy,
-{
-    pub(super) storage: ST,
-    _m: PhantomData<&'a ST>,
+pub struct Nb {
+    pub(super) storage: Box<dyn StorageStrategy>,
 }
 
-impl<'a, ST> Nb<'a, ST>
-where
-    ST: StorageStrategy,
-{
-    pub fn new(storage: ST) -> Self {
+impl Nb {
+    pub fn new<ST>(storage: ST) -> Self
+    where
+        ST: StorageStrategy + 'static,
+    {
         Self {
-            storage,
-            _m: PhantomData,
+            storage: Box::new(storage),
         }
     }
 }

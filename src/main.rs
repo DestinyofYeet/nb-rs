@@ -5,7 +5,7 @@ use colored::Colorize;
 use inquire::{Confirm, CustomType, Select};
 use itertools::Itertools;
 use nb_rs::{
-    core::{Nb, nb_wrapper::NbWrapper, sync_strategy::SyncStrategy},
+    core::{Nb, sync_strategy::SyncStrategy},
     default_strategies::{
         storage::file_storage::FileStorage,
         sync::{
@@ -71,7 +71,7 @@ pub fn main() -> anyhow::Result<()> {
 
     debug!("data_dir: {:?}", config.data_dir);
 
-    let nb: Box<dyn NbWrapper> = Box::new(Nb::new(FileStorage::new(config.data_dir)?));
+    let nb = Nb::new(FileStorage::new(config.data_dir)?);
 
     match args.action {
         ActionArgs::Create { notebook, note } => {
@@ -323,6 +323,7 @@ pub fn main() -> anyhow::Result<()> {
                 }
             }
         }
+
         ActionArgs::Sync { notebook, action } => {
             let mut notebook = match nb.get_notebook(notebook.clone())? {
                 Some(value) => value,
@@ -365,11 +366,11 @@ pub fn main() -> anyhow::Result<()> {
 
                             let git_sync = GitSync::new(git_meta);
 
-                            match git_sync.setup_sync(&notebook) {
+                            match git_sync.setup_sync(&notebook, nb.get_storage()) {
                                 Ok(meta) => meta,
                                 Err(e) => {
                                     debug!("Failed to setup git tracking. Deleting .git folder");
-                                    git_sync.remove_sync(&notebook)?;
+                                    git_sync.remove_sync(&notebook, nb.get_storage())?;
                                     return Err(e.into());
                                 }
                             }

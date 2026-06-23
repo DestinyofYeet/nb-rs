@@ -7,7 +7,10 @@ use itertools::Itertools;
 use tracing::debug;
 
 use crate::{
-    core::sync_strategy::{SyncError, SyncStrategy, meta::SyncMetaInformation},
+    core::{
+        storage_strategy::StorageStrategy,
+        sync_strategy::{SyncError, SyncStrategy, meta::SyncMetaInformation},
+    },
     default_strategies::sync::git::meta::GitSyncMeta,
 };
 
@@ -77,6 +80,7 @@ impl SyncStrategy for GitSync {
     fn setup_sync(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
+        storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         let path = notebook.get_path();
         self.run_git_command(GitCommand::new(
@@ -116,6 +120,7 @@ impl SyncStrategy for GitSync {
     fn remove_sync(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
+        storage: &dyn StorageStrategy,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         let mut path = PathBuf::from(notebook.get_path());
         path.push(".git");
@@ -130,6 +135,7 @@ impl SyncStrategy for GitSync {
     fn sync_note(
         &self,
         note: &crate::core::models::note::Note,
+        storage: &dyn StorageStrategy,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         let notebook_path = PathBuf::from(note.get_notebook().get_path());
         let notebook_path = notebook_path.to_str().expect("to get path");
@@ -180,7 +186,10 @@ impl SyncStrategy for GitSync {
         Ok(())
     }
 
-    fn from_metadata(metadata: &crate::core::sync_strategy::meta::SyncMetaInformation) -> Self {
+    fn from_metadata(
+        metadata: &crate::core::sync_strategy::meta::SyncMetaInformation,
+        storage: &dyn StorageStrategy,
+    ) -> Self {
         let meta: GitSyncMeta =
             serde_json::from_value(metadata.data.clone()).expect("to read back meta");
 
@@ -194,6 +203,7 @@ impl SyncStrategy for GitSync {
     fn sync_manual(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
+        storage: &dyn StorageStrategy,
     ) -> Result<(), SyncError> {
         let path = notebook.get_path();
 
@@ -207,7 +217,11 @@ impl SyncStrategy for GitSync {
         Ok(())
     }
 
-    fn sync_import(&self, notebook_path: &str) -> Result<SyncMetaInformation, SyncError> {
+    fn sync_import(
+        &self,
+        notebook_path: &str,
+        storage: &dyn StorageStrategy,
+    ) -> Result<SyncMetaInformation, SyncError> {
         std::fs::remove_dir_all(notebook_path)
             .map_err(|e| SyncError::Import(format!("Failed to remove notebook: {e}")))?;
 
