@@ -343,7 +343,7 @@ pub fn main() -> anyhow::Result<()> {
                 }
 
                 SyncArgs::Full {} => {
-                    println!("Manually syncing {}", notebook.get_name().blue());
+                    println!("Fully syncing {}", notebook.get_name().blue());
                     nb.sync_manual(&notebook)?;
 
                     println!("{}", "Done".green());
