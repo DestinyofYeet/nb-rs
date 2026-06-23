@@ -37,8 +37,11 @@ pub trait NbWrapper {
 
     fn get_path_on_fs(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, NbError>;
 
-    fn setup_sync(&self, notebook: &mut Notebook, sync: SyncMetaInformation)
-    -> Result<(), NbError>;
+    fn save_sync_setup(
+        &self,
+        notebook: &mut Notebook,
+        sync: SyncMetaInformation,
+    ) -> Result<(), NbError>;
 
     fn remove_sync(&self, notebook: &mut Notebook) -> Result<(), NbError>;
 

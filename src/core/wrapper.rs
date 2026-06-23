@@ -79,7 +79,7 @@ where
         Ok(self.storage.get_path_on_fs(notebook, &path.into())?)
     }
 
-    fn setup_sync(
+    fn save_sync_setup(
         &self,
         notebook: &mut Notebook,
         strategy: SyncMetaInformation,

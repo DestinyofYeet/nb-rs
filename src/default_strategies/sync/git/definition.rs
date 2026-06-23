@@ -116,8 +116,11 @@ impl SyncStrategy for GitSync {
         &self,
         notebook: &crate::core::models::notebook::Notebook,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
-        let path = PathBuf::from(notebook.get_path());
-        std::fs::remove_dir_all(path.join(".git"))
+        let mut path = PathBuf::from(notebook.get_path());
+        path.push(".git");
+        debug!("Removing .git folder at {path:?}");
+
+        std::fs::remove_dir_all(path)
             .map_err(|e| SyncError::RemoveSync(format!("Failed to delete .git folder: {e}")))?;
 
         Ok(())

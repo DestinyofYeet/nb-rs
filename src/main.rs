@@ -1,9 +1,6 @@
 use std::{fs::File, process::Command};
 
-use clap::{
-    CommandFactory, FromArgMatches,
-    error::{ContextKind::Custom, ErrorKind},
-};
+use clap::{CommandFactory, FromArgMatches, error::ErrorKind};
 use colored::Colorize;
 use inquire::{Confirm, CustomType, Select};
 use itertools::Itertools;
@@ -368,11 +365,18 @@ pub fn main() -> anyhow::Result<()> {
 
                             let git_sync = GitSync::new(git_meta);
 
-                            git_sync.setup_sync(&notebook)?
+                            match git_sync.setup_sync(&notebook) {
+                                Ok(meta) => meta,
+                                Err(e) => {
+                                    debug!("Failed to setup git tracking. Deleting .git folder");
+                                    git_sync.remove_sync(&notebook)?;
+                                    return Err(e.into());
+                                }
+                            }
                         }
                     };
 
-                    nb.setup_sync(&mut notebook, meta)?;
+                    nb.save_sync_setup(&mut notebook, meta)?;
                     println!("{}", "Success".green());
                 }
 
