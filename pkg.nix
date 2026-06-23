@@ -17,7 +17,7 @@ rustPlatform.buildRustPackage {
 
   src = ./.;
 
-  cargoHash = "sha256-2sttg6gUJycxREkbZ3oB1SWQ8VGXfbSi8BnSwyhSic0=";
+  cargoHash = "sha256-H213F4d4zh/K9rqGsMvADZVO03mmPUAp4lP1++v1B3A=";
 
   GIT_REV = version;
 
