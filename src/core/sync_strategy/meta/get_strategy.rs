@@ -19,9 +19,9 @@ impl SyncMetaInformation {
             return Ok(Box::new(GitSync::from_metadata(self, storage)));
         }
 
-        return Err(SyncError::SyncError(format!(
+        Err(SyncError::SyncError(format!(
             "Unknown strategy {}",
             self.strategy_name
-        )));
+        )))
     }
 }

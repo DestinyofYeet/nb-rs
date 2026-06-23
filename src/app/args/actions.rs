@@ -44,4 +44,13 @@ pub enum ActionArgs {
         #[command(subcommand)]
         action: SyncArgs,
     },
+
+    #[command(about = "Modify notes or notebook")]
+    Rename {
+        #[arg(help = "The notebook to rename")]
+        notebook: String,
+
+        #[arg(help = "The note to rename")]
+        note: Option<String>,
+    },
 }

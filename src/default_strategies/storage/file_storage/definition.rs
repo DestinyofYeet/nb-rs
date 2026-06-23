@@ -35,6 +35,23 @@ impl FileStorage {
 }
 
 impl StorageStrategy for FileStorage {
+    fn rename_notebook(
+        &self,
+        notebook: Notebook,
+        new_name: &str,
+    ) -> Result<Notebook, StorageError> {
+        let path = PathBuf::from(notebook.get_path());
+
+        let mut new_path = path.parent().expect("to have a parent").to_path_buf();
+        new_path.push(new_name);
+
+        std::fs::rename(&path, &new_path).map_err(|e| StorageError::Rename(e.to_string()))?;
+
+        Ok(self
+            .get_notebook(new_name)?
+            .expect("to find moved notebook"))
+    }
+
     fn list_notebooks(&self) -> Result<Vec<Notebook>, StorageError> {
         let path = self.data_dir.clone();
 
@@ -52,7 +69,7 @@ impl StorageStrategy for FileStorage {
                 .map_err(|e| StorageError::ListNotebooks(format!("Failed to get file type: {e}")))?
                 .is_dir()
             {
-                match self.get_notebook(entry.file_name().to_string_lossy().to_string())? {
+                match self.get_notebook(&entry.file_name().to_string_lossy())? {
                     Some(value) => {
                         notebooks.push(value);
                     }
@@ -102,13 +119,13 @@ impl StorageStrategy for FileStorage {
         Ok(())
     }
 
-    fn get_notebook(&self, name: String) -> Result<Option<Notebook>, StorageError> {
-        let maybe_path = self.data_dir.join(&name);
+    fn get_notebook(&self, name: &str) -> Result<Option<Notebook>, StorageError> {
+        let maybe_path = self.data_dir.join(name);
 
         if maybe_path.is_dir() {
             let meta = self.read_notebook_meta(&maybe_path.to_string_lossy())?;
             return Ok(Some(Notebook::new(
-                name,
+                name.to_string(),
                 maybe_path.to_str().unwrap().to_string(),
                 meta,
             )));
@@ -149,9 +166,9 @@ impl StorageStrategy for FileStorage {
         todo!()
     }
 
-    fn create_note<'a>(
+    fn create_note(
         &self,
-        notebook: &'a mut Notebook,
+        notebook: &mut Notebook,
         title: String,
         path: &str,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
@@ -170,14 +187,14 @@ impl StorageStrategy for FileStorage {
         let meta = notebook.get_meta();
         let path = notebook.get_path();
 
-        self.save_notebook_meta(&path, meta)?;
+        self.save_notebook_meta(path, meta)?;
 
         Ok(())
     }
 
-    fn delete_note<'a>(
+    fn delete_note(
         &self,
-        notebook: &'a mut Notebook,
+        notebook: &mut Notebook,
         note_path: &str,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
         std::fs::remove_file(note_path)
@@ -199,7 +216,7 @@ impl StorageStrategy for FileStorage {
             )));
         };
 
-        self.save_notebook_meta(&notebook.get_path(), notebook.get_meta())?;
+        self.save_notebook_meta(notebook.get_path(), notebook.get_meta())?;
 
         Ok(())
     }
@@ -209,7 +226,7 @@ impl StorageStrategy for FileStorage {
         _notebook: &Notebook,
         note: &crate::core::models::note::Note,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        self.save_note_meta(&note.get_path(), note.get_metadata())?;
+        self.save_note_meta(note.get_path(), note.get_metadata())?;
         Ok(())
     }
 
@@ -315,10 +332,6 @@ impl StorageStrategy for FileStorage {
         Ok(book_path)
     }
 
-    fn get_root_path_on_fs<'a>(&self) -> Result<PathBuf, StorageError> {
-        Ok(self.data_dir.clone())
-    }
-
     fn list_files(&self, notebook: &Notebook) -> Result<Vec<String>, StorageError> {
         let mut files = Vec::new();
 
@@ -339,5 +352,23 @@ impl StorageStrategy for FileStorage {
         }
 
         Ok(files)
+    }
+
+    fn rename_note_title(
+        &self,
+        notebook: &mut Notebook,
+        note_path: &str,
+        new_title: &str,
+    ) -> Result<(), StorageError> {
+        let mut path = PathBuf::from(notebook.get_path());
+        path.push(note_path);
+
+        let mut note_meta = self.read_note_meta(&path.to_string_lossy())?;
+
+        note_meta.title = new_title.to_string();
+
+        self.save_note_meta(&path.to_string_lossy(), &note_meta)?;
+
+        Ok(())
     }
 }

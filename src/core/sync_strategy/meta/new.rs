@@ -13,3 +13,9 @@ impl SyncMetaInformation {
         }
     }
 }
+
+impl Default for SyncMetaInformation {
+    fn default() -> Self {
+        Self::new()
+    }
+}

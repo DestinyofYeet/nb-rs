@@ -7,6 +7,8 @@ pub enum StorageError {
     #[error("Storage error: {0}")]
     StorageError(String),
 
+    #[error("Failed to rename notebook: {0}")]
+    Rename(String),
     
     #[error("Failed to list notebooks: {0}")]
     ListNotebooks(String),

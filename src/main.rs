@@ -82,7 +82,7 @@ pub fn main() -> anyhow::Result<()> {
 
             match note {
                 Some(note) => {
-                    let mut notebook = match nb.get_notebook(notebook.clone())? {
+                    let mut notebook = match nb.get_notebook(&notebook)? {
                         Some(value) => value,
                         None => {
                             return Err(anyhow::format_err!(
@@ -128,7 +128,7 @@ pub fn main() -> anyhow::Result<()> {
         }
 
         ActionArgs::Open { notebook, note } => {
-            let notebook = match nb.get_notebook(notebook.clone())? {
+            let notebook = match nb.get_notebook(&notebook)? {
                 Some(value) => value,
                 None => {
                     return Err(anyhow::format_err!(
@@ -202,7 +202,7 @@ pub fn main() -> anyhow::Result<()> {
             };
 
             if new_modified != old_modified {
-                nb.save_note(&notebook, &note)?;
+                nb.save_note(&note, config.no_sync)?;
             }
         }
 
@@ -227,7 +227,7 @@ pub fn main() -> anyhow::Result<()> {
             }
 
             Some(notebook) => {
-                let notebook = match nb.get_notebook(notebook.clone())? {
+                let notebook = match nb.get_notebook(&notebook)? {
                     Some(value) => value,
                     None => {
                         return Err(anyhow::format_err!(
@@ -266,7 +266,7 @@ pub fn main() -> anyhow::Result<()> {
         },
 
         ActionArgs::Delete { notebook, note } => {
-            let mut notebook = match nb.get_notebook(notebook.clone())? {
+            let mut notebook = match nb.get_notebook(&notebook)? {
                 Some(value) => value,
                 None => {
                     return Err(anyhow::format_err!(
@@ -325,7 +325,7 @@ pub fn main() -> anyhow::Result<()> {
         }
 
         ActionArgs::Sync { notebook, action } => {
-            let mut notebook = match nb.get_notebook(notebook.clone())? {
+            let mut notebook = match nb.get_notebook(&notebook)? {
                 Some(value) => value,
                 None => {
                     println!("Notebook {} not found.", notebook.blue());
@@ -434,6 +434,72 @@ pub fn main() -> anyhow::Result<()> {
                     };
 
                     nb.sync_import(sync, &notebook)?;
+
+                    println!("{}", "Done".green());
+                }
+            }
+        }
+
+        ActionArgs::Rename { notebook, note } => {
+            let mut notebook = match nb.get_notebook(&notebook)? {
+                Some(value) => value,
+                None => {
+                    println!("Failed to find notebook {}", notebook.blue());
+                    return Ok(());
+                }
+            };
+
+            match note {
+                Some(note) => match nb.get_note(&notebook, &note)? {
+                    Some(note) => {
+                        let new_title = CustomType::<String>::new(&format!(
+                            "Current title: {} | New title:",
+                            note.get_title().blue()
+                        ))
+                        .prompt()?;
+
+                        if !Confirm::new(&format!("Change title to {}?", new_title.blue()))
+                            .prompt()?
+                        {
+                            println!("{}", "Cancelled".red());
+                            return Ok(());
+                        }
+
+                        let file_name = note.get_file_name();
+                        drop(note);
+
+                        nb.rename_note_title(&mut notebook, &file_name, &new_title)?;
+
+                        println!("{}", "Done".green());
+                    }
+                    None => {
+                        println!(
+                            "Failed to find note {} in notebook {}.",
+                            note.blue(),
+                            notebook.get_name().blue()
+                        );
+                        return Ok(());
+                    }
+                },
+                None => {
+                    let new_name = CustomType::<String>::new(&format!(
+                        "Current name: {} | New name:",
+                        notebook.get_name().blue(),
+                    ))
+                    .prompt()?;
+
+                    if !Confirm::new(&format!(
+                        "Change notebook name from {} to {}?",
+                        notebook.get_name().blue(),
+                        new_name.blue()
+                    ))
+                    .prompt()?
+                    {
+                        println!("{}", "Cancelled".red());
+                        return Ok(());
+                    }
+
+                    nb.rename_notebook(notebook, &new_name)?;
 
                     println!("{}", "Done".green());
                 }
