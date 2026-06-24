@@ -258,6 +258,16 @@ impl SyncStrategy for GitSync {
             {
                 vec.push(note.get_file_name());
 
+                vec.push(
+                    storage
+                        .get_note_metadata_file(&note)
+                        .map_err(|e| SyncError::Sync(format!("Failed to get note metadata: {e}")))?
+                        .file_name()
+                        .expect("to have filename")
+                        .to_string_lossy()
+                        .to_string(),
+                );
+
                 for attachment in &note.get_metadata().attachments {
                     vec.push(attachment.get_path().to_string());
                 }
@@ -292,8 +302,7 @@ impl SyncStrategy for GitSync {
         self.run_git_command(GitCommand::new(path.into(), &["pull"]))?;
         self.run_git_command(GitCommand::new(path.into(), &args))?;
         self.run_git_command(
-            GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Manual sync"])
-                .set_failable(true),
+            GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Full sync"]).set_failable(true),
         )?;
         self.run_git_command(GitCommand::new(path.into(), &["push"]))?;
 
