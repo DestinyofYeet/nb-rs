@@ -413,7 +413,12 @@ pub fn main() -> anyhow::Result<()> {
                         let file_name = note.get_file_name();
                         drop(note);
 
-                        nb.rename_note_title(&mut notebook, &file_name, &new_title)?;
+                        nb.rename_note_title(
+                            &mut notebook,
+                            &file_name,
+                            &new_title,
+                            config.no_sync,
+                        )?;
 
                         println!("{}", "Done".green());
                     }

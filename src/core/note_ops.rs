@@ -120,9 +120,23 @@ impl Nb {
         notebook: &mut Notebook,
         note_path: &str,
         new_title: &str,
+        no_sync: bool,
     ) -> Result<(), NbError> {
-        Ok(self
-            .storage
-            .rename_note_title(notebook, note_path, new_title)?)
+        {
+            self.storage
+                .rename_note_title(notebook, note_path, new_title)?;
+        }
+        {
+            let note = self
+                .storage
+                .get_note_by_path(notebook, note_path)?
+                .expect("to have note");
+
+            if !no_sync {
+                self.sync_note(&note)?;
+            }
+        }
+
+        Ok(())
     }
 }
