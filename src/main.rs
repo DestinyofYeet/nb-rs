@@ -3,7 +3,7 @@ use colored::Colorize;
 use inquire::{Confirm, CustomType};
 use itertools::Itertools;
 use nb_rs::{
-    core::{Nb, sync_strategy::SyncStrategy},
+    core::{Nb, models::note_path::NoteFilename, sync_strategy::SyncStrategy},
     default_strategies::{
         storage::file_storage::FileStorage,
         sync::{
@@ -16,7 +16,7 @@ use tracing::{debug, trace};
 use tracing_subscriber::EnvFilter;
 
 use crate::app::{
-    args::{ActionArgs, Args, SyncArgs},
+    args::{ActionArgs, Args, ModifyArgs, SyncArgs},
     config::Config,
 };
 
@@ -45,12 +45,15 @@ pub fn main() -> anyhow::Result<()> {
 
     let args = Args::from_arg_matches(&arg_matches).unwrap();
 
-    let level = match args.verbose {
-        0 => "error",
-        1 => "info",
-        2 => "debug",
-        _ => "trace",
-    };
+    let level = format!(
+        "{},mio=warn",
+        match args.verbose {
+            0 => "error",
+            1 => "info",
+            2 => "debug",
+            _ => "trace",
+        }
+    );
 
     tracing_subscriber::fmt()
         .with_line_number(true)
@@ -68,6 +71,7 @@ pub fn main() -> anyhow::Result<()> {
     let config = Config::new(&args)?;
 
     debug!("data_dir: {:?}", config.data_dir);
+    trace!("config: {config:?}");
 
     let nb = Nb::new(FileStorage::new(config.data_dir)?);
 
@@ -80,6 +84,8 @@ pub fn main() -> anyhow::Result<()> {
 
             match note {
                 Some(note) => {
+                    let note = NoteFilename::new(note);
+
                     let mut notebook = match nb.get_notebook(&notebook)? {
                         Some(value) => value,
                         None => {
@@ -93,7 +99,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     if !Confirm::new(&format!(
                         "Create note {} with title {} in notebook {}?",
-                        note.blue(),
+                        note.get_filename().blue(),
                         title.blue(),
                         notebook.get_name().blue()
                     ))
@@ -103,11 +109,11 @@ pub fn main() -> anyhow::Result<()> {
                         return Ok(());
                     }
 
-                    nb.create_note(&mut notebook, title.clone(), &note, config.no_sync)?;
+                    nb.create_note(&mut notebook, title.clone(), &note, config.sync)?;
 
                     println!(
                         "Created note {} with title {} in notebook {}.",
-                        note.blue(),
+                        note.get_filename().blue(),
                         title.blue(),
                         notebook.get_name().blue()
                     );
@@ -116,7 +122,7 @@ pub fn main() -> anyhow::Result<()> {
                         &notebook,
                         &note,
                         &config.editor_cmd,
-                        config.no_sync,
+                        config.sync,
                     )?;
                 }
 
@@ -145,9 +151,9 @@ pub fn main() -> anyhow::Result<()> {
 
             nb.interactive_open_note_for_edit(
                 &notebook,
-                &note,
+                &NoteFilename::new(note),
                 &config.editor_cmd,
-                config.no_sync,
+                config.sync,
             )?;
         }
 
@@ -236,18 +242,20 @@ pub fn main() -> anyhow::Result<()> {
                 }
 
                 Some(note) => {
+                    let note = NoteFilename::new(note);
+
                     let note = match nb.get_note(&notebook, &note)? {
                         Some(note) => note,
                         None => {
                             return Err(anyhow::format_err!(
                                 "No note found with name {} in notebook {}",
-                                note.blue(),
+                                note.get_filename().blue(),
                                 notebook.get_name().blue()
                             ));
                         }
                     };
 
-                    let path = note.get_file_name();
+                    let path = note.get_path().clone();
 
                     if !Confirm::new(&format!(
                         "Delete note {} in notebook {}",
@@ -262,7 +270,7 @@ pub fn main() -> anyhow::Result<()> {
 
                     drop(note);
 
-                    nb.delete_note(&mut notebook, &path, config.no_sync)?;
+                    nb.delete_note(&mut notebook, path.get_filename(), config.sync)?;
 
                     println!("{}", "Deleted".green());
                 }
@@ -385,7 +393,7 @@ pub fn main() -> anyhow::Result<()> {
             }
         }
 
-        ActionArgs::Rename { notebook, note } => {
+        ActionArgs::Modify { notebook, action } => {
             let mut notebook = match nb.get_notebook(&notebook)? {
                 Some(value) => value,
                 None => {
@@ -394,64 +402,161 @@ pub fn main() -> anyhow::Result<()> {
                 }
             };
 
-            match note {
-                Some(note) => match nb.get_note(&notebook, &note)? {
+            match action {
+                ModifyArgs::Title { note } => match note {
                     Some(note) => {
-                        let new_title = CustomType::<String>::new(&format!(
-                            "Current title: {} | New title:",
-                            note.get_title().blue()
+                        let note = NoteFilename::new(note);
+                        match nb.get_note(&notebook, &note)? {
+                            Some(note) => {
+                                let new_title = CustomType::<String>::new(&format!(
+                                    "Current note title: {} | New title:",
+                                    note.get_title().blue()
+                                ))
+                                .prompt()?;
+
+                                if !Confirm::new(&format!("Change title to {}?", new_title.blue()))
+                                    .prompt()?
+                                {
+                                    println!("{}", "Cancelled".red());
+                                    return Ok(());
+                                }
+
+                                let file_name = note.get_path().clone();
+                                drop(note);
+
+                                nb.rename_note_title(
+                                    &mut notebook,
+                                    file_name.get_filename(),
+                                    &new_title,
+                                    config.sync,
+                                )?;
+
+                                println!("{}", "Done".green());
+                            }
+                            None => {
+                                println!(
+                                    "Failed to find note {} in notebook {}.",
+                                    note.get_filename().blue(),
+                                    notebook.get_name().blue()
+                                );
+                                return Ok(());
+                            }
+                        }
+                    }
+                    None => {
+                        let new_name = CustomType::<String>::new(&format!(
+                            "Current notebook name: {} | New name:",
+                            notebook.get_name().blue(),
                         ))
                         .prompt()?;
 
-                        if !Confirm::new(&format!("Change title to {}?", new_title.blue()))
-                            .prompt()?
+                        if !Confirm::new(&format!(
+                            "Change notebook name from {} to {}?",
+                            notebook.get_name().blue(),
+                            new_name.blue()
+                        ))
+                        .prompt()?
                         {
                             println!("{}", "Cancelled".red());
                             return Ok(());
                         }
 
-                        let file_name = note.get_file_name();
-                        drop(note);
-
-                        nb.rename_note_title(
-                            &mut notebook,
-                            &file_name,
-                            &new_title,
-                            config.no_sync,
-                        )?;
+                        nb.rename_notebook(notebook, &new_name)?;
 
                         println!("{}", "Done".green());
                     }
-                    None => {
-                        println!(
-                            "Failed to find note {} in notebook {}.",
-                            note.blue(),
-                            notebook.get_name().blue()
-                        );
-                        return Ok(());
-                    }
                 },
-                None => {
-                    let new_name = CustomType::<String>::new(&format!(
-                        "Current name: {} | New name:",
-                        notebook.get_name().blue(),
-                    ))
-                    .prompt()?;
+                ModifyArgs::Tags { note } => {
+                    let mut note = match note {
+                        Some(note) => {
+                            let note = NoteFilename::new(note);
+                            match nb.get_note(&notebook, &note)? {
+                                Some(value) => value,
+                                None => {
+                                    return Err(anyhow::format_err!(
+                                        "Failed to find note {} in notebook {}",
+                                        note.get_filename().blue(),
+                                        notebook.get_name().blue()
+                                    ));
+                                }
+                            }
+                        }
 
-                    if !Confirm::new(&format!(
-                        "Change notebook name from {} to {}?",
-                        notebook.get_name().blue(),
-                        new_name.blue()
-                    ))
-                    .prompt()?
+                        None => {
+                            return Err(anyhow::format_err!("A note has to be provided!"));
+                        }
+                    };
+                    let mut tags: Vec<String> = note.get_metadata().get_tags().clone();
+
                     {
+                        let mut new_tags: Vec<String> = Vec::new();
+
+                        println!("Current tags: {}", tags.iter().map(|e| e.blue()).join(", "));
+
+                        while let tag =
+                            CustomType::<String>::new("Tag to add (empty to quit):").prompt()?
+                            && !tag.is_empty()
+                        {
+                            new_tags.push(tag);
+                        }
+
+                        if !new_tags.is_empty() {
+                            if !Confirm::new(&format!(
+                                "Add the following tags?: {}",
+                                new_tags.iter().map(|e| e.blue()).join(", ")
+                            ))
+                            .prompt()?
+                            {
+                                println!("{}", "Cancelled".red());
+                                return Ok(());
+                            }
+
+                            for tag in new_tags {
+                                tags.push(tag);
+                            }
+                        }
+                    }
+
+                    {
+                        let mut remove_tags: Vec<String> = Vec::new();
+
+                        println!("Current tags: {}", tags.iter().map(|e| e.blue()).join(", "));
+
+                        while let tag =
+                            CustomType::<String>::new("Tag to remove (empty to quit):").prompt()?
+                            && !tag.is_empty()
+                        {
+                            remove_tags.push(tag);
+                        }
+
+                        if !remove_tags.is_empty() {
+                            if !Confirm::new(&format!(
+                                "Remove the following tags?: {}",
+                                remove_tags.iter().map(|e| e.blue()).join(", ")
+                            ))
+                            .prompt()?
+                            {
+                                println!("{}", "Cancelled".red());
+                                return Ok(());
+                            }
+
+                            for tag in remove_tags {
+                                if let Some(tag_index) = tags.iter().position(|e| e == &tag) {
+                                    tags.remove(tag_index);
+                                }
+                            }
+                        }
+                    }
+
+                    println!("Final tags: {}", tags.iter().map(|e| e.blue()).join(","));
+                    if !Confirm::new("Save above tags? y/N: ").prompt()? {
                         println!("{}", "Cancelled".red());
                         return Ok(());
                     }
 
-                    nb.rename_notebook(notebook, &new_name)?;
+                    note.get_metadata_mut().set_tags(tags);
 
-                    println!("{}", "Done".green());
+                    nb.save_note(&note, config.sync)?;
                 }
             }
         }

@@ -5,10 +5,18 @@ use inquire::Select;
 use itertools::Itertools;
 use tracing::debug;
 
-use crate::core::{Nb, NbError, models::notebook::Notebook, storage_strategy::StorageStrategy};
+use crate::core::{
+    Nb, NbError,
+    models::{note_path::NoteFilename, notebook::Notebook},
+    storage_strategy::StorageStrategy,
+};
 
 impl Nb {
-    pub fn get_path_on_fs(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, NbError> {
+    pub fn get_path_on_fs(
+        &self,
+        notebook: &Notebook,
+        path: &NoteFilename,
+    ) -> Result<PathBuf, NbError> {
         Ok(self.storage.get_path_on_fs(notebook, path)?)
     }
 
@@ -19,19 +27,26 @@ impl Nb {
     pub fn interactive_open_note_for_edit(
         &self,
         notebook: &Notebook,
-        note: &str,
+        note_search: &NoteFilename,
         editor: &str,
         do_sync: bool,
     ) -> Result<(), anyhow::Error> {
-        let note = match self.get_note(notebook, note)? {
+        let note = match self.get_note(notebook, note_search)? {
             Some(note) => note,
             None => {
                 let mut notes = self.list_notes(notebook)?;
-                notes.retain(|e| e.get_title().to_lowercase().contains(&note.to_lowercase()));
+                notes.retain(|e| {
+                    e.get_title()
+                        .to_lowercase()
+                        .contains(&note_search.get_filename().to_lowercase())
+                });
 
                 match notes.len() {
                     0 => {
-                        return Err(anyhow::format_err!("No notes found with {}", note.blue()));
+                        return Err(anyhow::format_err!(
+                            "No notes found with {}",
+                            note_search.get_filename().blue()
+                        ));
                     }
 
                     1 => notes.pop().unwrap(),
@@ -58,7 +73,7 @@ impl Nb {
             }
         };
 
-        let note_path = self.get_path_on_fs(notebook, &note.get_file_name())?;
+        let note_path = self.get_path_on_fs(notebook, note.get_path().get_filename())?;
 
         let old_modified = {
             let file = File::open(&note_path)?;

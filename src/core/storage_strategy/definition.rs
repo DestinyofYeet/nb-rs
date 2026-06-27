@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use crate::core::{
     models::{
-        note::Note, note_meta::NoteMetaInformation, notebook::Notebook,
+        note::Note,
+        note_meta::NoteMetaInformation,
+        note_path::{NoteFilename, NotePath},
+        notebook::Notebook,
         notebook_meta::NotebookMetaInformation,
     },
     storage_strategy::StorageError,
@@ -41,7 +44,7 @@ pub trait StorageStrategy {
     fn rename_note_title(
         &self,
         notebook: &mut Notebook,
-        note_path: &str,
+        note_path: &NoteFilename,
         new_title: &str,
     ) -> Result<(), StorageError>;
 
@@ -59,38 +62,46 @@ pub trait StorageStrategy {
     fn get_note_by_path<'a>(
         &self,
         notebook: &'a Notebook,
-        note_path: &str,
+        note_path: &NoteFilename,
     ) -> Result<Option<Note<'a>>, StorageError>;
 
     /// This function saves note metainformation
     fn save_note_meta(
         &self,
-        note_path: &str,
+        note_path: &NotePath,
         meta: &NoteMetaInformation,
     ) -> Result<(), StorageError>;
 
     /// This function reads note metainformation
-    fn read_note_meta(&self, note_path: &str) -> Result<NoteMetaInformation, StorageError>;
+    fn read_note_meta(&self, note_path: &NotePath) -> Result<NoteMetaInformation, StorageError>;
 
     /// This function creates a note
     fn create_note(
         &self,
         notebook: &mut Notebook,
         title: String,
-        path: &str,
+        path: &NoteFilename,
     ) -> Result<(), StorageError>;
 
     /// This function deletes a note
-    fn delete_note(&self, notebook: &mut Notebook, note_path: &str) -> Result<(), StorageError>;
+    fn delete_note(
+        &self,
+        notebook: &mut Notebook,
+        note_path: &NoteFilename,
+    ) -> Result<(), StorageError>;
 
     /// This function saves a note, after it was modified by the editor
     fn save_note(&self, notebook: &Notebook, note: &Note) -> Result<(), StorageError>;
 
     /// This function returns a path on the local filesystem
-    fn get_path_on_fs(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, StorageError>;
+    fn get_path_on_fs(
+        &self,
+        notebook: &Notebook,
+        path: &NoteFilename,
+    ) -> Result<PathBuf, StorageError>;
 
     /// This function gets all filenames in a notebook
-    fn list_files(&self, notebook: &Notebook) -> Result<Vec<String>, StorageError>;
+    fn list_files(&self, notebook: &Notebook) -> Result<Vec<NoteFilename>, StorageError>;
 
     /// Returns the path of the metadata file in the notebook
     fn get_notebook_metadata_file(&self, notebook: &Notebook) -> Result<PathBuf, StorageError>;

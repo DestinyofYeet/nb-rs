@@ -18,7 +18,7 @@ impl Config {
                     dir.data
                 }
             },
-            no_sync: args.no_sync,
+            sync: !args.no_sync,
             editor_cmd: std::env::var("EDITOR").map_err(|_| ConfigError::NoEditor)?,
         })
     }

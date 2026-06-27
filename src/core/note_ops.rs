@@ -1,6 +1,6 @@
 use crate::core::{
     Nb, NbError,
-    models::{note::Note, notebook::Notebook},
+    models::{note::Note, note_path::NoteFilename, notebook::Notebook},
     sync_strategy::sync_kind::SyncKind,
 };
 
@@ -9,19 +9,19 @@ use roxygen::roxygen;
 impl Nb {
     #[roxygen]
     /// Create a note
-    pub fn create_note<'a>(
+    pub fn create_note(
         &self,
         /// Notebook to create the note in
-        notebook: &'a mut Notebook,
+        notebook: &mut Notebook,
 
         /// Title to give the note
         title: String,
 
         /// The path of the note (usually the filename) in the notebook
-        path: &'a str,
+        path: &NoteFilename,
 
         /// Sync?
-        do_sync: bool,
+        sync: bool,
     ) -> Result<(), NbError> {
         self.storage.create_note(notebook, title, path)?;
 
@@ -30,13 +30,13 @@ impl Nb {
             .get_note_by_path(notebook, path)?
             .expect("to get note");
 
-        let sync = notebook
+        let sync_strategy = notebook
             .get_meta()
             .get_sync_information()
             .get_strategy(&*self.storage)?;
 
-        if !do_sync {
-            sync.sync_note(&note, &*self.storage, SyncKind::Create)?;
+        if sync {
+            sync_strategy.sync_note(&note, &*self.storage, SyncKind::Create)?;
         }
 
         Ok(())
@@ -49,7 +49,7 @@ impl Nb {
         /// Notebook to look in
         notebook: &'a Notebook,
         /// Path of the note in the notebook
-        note_path: &'a str,
+        note_path: &NoteFilename,
     ) -> Result<Option<Note<'a>>, NbError> {
         Ok(self.storage.get_note_by_path(notebook, note_path)?)
     }
@@ -61,17 +61,17 @@ impl Nb {
         /// Note to save
         note: &Note,
         /// Should the change be synced?
-        do_sync: bool,
+        sync: bool,
     ) -> Result<(), NbError> {
         let notebook = note.get_notebook();
         self.storage.save_note(notebook, note)?;
 
         let meta = notebook.get_meta().get_sync_information();
 
-        let sync = meta.get_strategy(&*self.storage)?;
+        let sync_strat = meta.get_strategy(&*self.storage)?;
 
-        if !do_sync {
-            sync.sync_note(note, &*self.storage, SyncKind::Edit)?;
+        if sync {
+            sync_strat.sync_note(note, &*self.storage, SyncKind::Edit)?;
         }
 
         Ok(())
@@ -83,33 +83,33 @@ impl Nb {
 
     #[roxygen]
     /// Deletes a note
-    pub fn delete_note<'a>(
+    pub fn delete_note(
         &self,
         /// The notebook containing the note
-        notebook: &'a mut Notebook,
+        notebook: &mut Notebook,
         /// The path to the note in the notebook
-        note_path: &'a str,
+        note_path: &NoteFilename,
 
-        no_sync: bool,
+        sync: bool,
     ) -> Result<(), NbError> {
-        let sync = notebook
+        let sync_strategy = notebook
             .get_meta()
             .get_sync_information()
             .get_strategy(&*self.storage)?;
 
-        if !no_sync {
+        if !sync {
             let note = self
                 .storage
                 .get_note_by_path(notebook, note_path)?
                 .expect("to find note");
 
-            sync.sync_note(&note, &*self.storage, SyncKind::Delete)?;
+            sync_strategy.sync_note(&note, &*self.storage, SyncKind::Delete)?;
         }
 
         self.storage.delete_note(notebook, note_path)?;
 
-        if !no_sync {
-            sync.sync_full(notebook, &*self.storage)?;
+        if sync {
+            sync_strategy.sync_full(notebook, &*self.storage)?;
         }
 
         Ok(())
@@ -118,9 +118,9 @@ impl Nb {
     pub fn rename_note_title(
         &self,
         notebook: &mut Notebook,
-        note_path: &str,
+        note_path: &NoteFilename,
         new_title: &str,
-        no_sync: bool,
+        sync: bool,
     ) -> Result<(), NbError> {
         {
             self.storage
@@ -132,7 +132,7 @@ impl Nb {
                 .get_note_by_path(notebook, note_path)?
                 .expect("to have note");
 
-            if !no_sync {
+            if sync {
                 self.sync_note(&note)?;
             }
         }

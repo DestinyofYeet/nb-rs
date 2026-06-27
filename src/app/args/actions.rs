@@ -1,6 +1,6 @@
 use clap::Subcommand;
 
-use crate::app::args::SyncArgs;
+use crate::app::args::{ModifyArgs, SyncArgs};
 
 #[derive(Debug, Subcommand)]
 pub enum ActionArgs {
@@ -46,11 +46,11 @@ pub enum ActionArgs {
     },
 
     #[command(about = "Modify notes or notebook")]
-    Rename {
-        #[arg(help = "The notebook to rename")]
+    Modify {
+        #[arg(help = "The notebook to modify")]
         notebook: String,
 
-        #[arg(help = "The note to rename")]
-        note: Option<String>,
+        #[command(subcommand)]
+        action: ModifyArgs,
     },
 }

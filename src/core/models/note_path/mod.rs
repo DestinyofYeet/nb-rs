@@ -1,5 +1,5 @@
 mod definition;
+mod getter;
 mod new;
-mod tags;
 
 pub use definition::*;

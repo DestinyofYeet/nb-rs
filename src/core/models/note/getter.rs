@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-
-use crate::core::models::{note::Note, note_meta::NoteMetaInformation, notebook::Notebook};
+use crate::core::models::{
+    note::Note, note_meta::NoteMetaInformation, note_path::NotePath, notebook::Notebook,
+};
 
 impl<'a> Note<'a> {
-    pub fn get_path(&self) -> &str {
+    pub fn get_path(&self) -> &NotePath {
         &self.path
     }
 
@@ -19,11 +19,11 @@ impl<'a> Note<'a> {
         &self.meta
     }
 
-    pub fn get_file_name(&self) -> String {
-        PathBuf::from(&self.path)
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string()
+    pub fn get_metadata_mut(&mut self) -> &mut NoteMetaInformation {
+        &mut self.meta
+    }
+
+    pub fn get_file_name(&self) -> &str {
+        self.path.get_filename().get_filename()
     }
 }

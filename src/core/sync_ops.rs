@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{
     core::{
         Nb, NbError,
@@ -83,17 +81,16 @@ impl Nb {
             // assume initialized
             return Ok(());
         }
+
         // Best effort implementation. Import every file that is in the top level
-
         for file in self.storage.list_files(notebook)? {
-            book_meta.add_note(file.clone());
+            book_meta.add_note(&file);
 
-            let mut note_path = PathBuf::from(notebook.get_path());
-            note_path.push(file.clone());
+            let note_path = notebook.get_notepath(file.clone());
 
             self.storage.save_note_meta(
-                note_path.to_str().expect("to have a valid path"),
-                &NoteMetaInformation::new(file),
+                &note_path,
+                &NoteMetaInformation::new(file.get_filename().to_string()),
             )?;
         }
 

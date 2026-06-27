@@ -1,4 +1,7 @@
-use crate::core::models::notebook_meta::NotebookMetaInformation;
+use crate::core::models::{
+    note_path::{NoteFilename, NotePath},
+    notebook_meta::NotebookMetaInformation,
+};
 
 #[derive(Debug, Clone)]
 pub struct Notebook {
@@ -27,5 +30,9 @@ impl Notebook {
 
     pub(crate) fn new(name: String, path: String, meta: NotebookMetaInformation) -> Self {
         Self { name, path, meta }
+    }
+
+    pub fn get_notepath(&self, filename: NoteFilename) -> NotePath {
+        NotePath::new(filename, self.path.clone())
     }
 }

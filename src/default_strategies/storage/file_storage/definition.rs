@@ -4,7 +4,10 @@ use tracing::{debug, warn};
 
 use crate::core::{
     models::{
-        note::Note, note_meta::NoteMetaInformation, notebook::Notebook,
+        note::Note,
+        note_meta::NoteMetaInformation,
+        note_path::{NoteFilename, NotePath},
+        notebook::Notebook,
         notebook_meta::NotebookMetaInformation,
     },
     storage_strategy::{StorageError, StorageStrategy},
@@ -31,6 +34,11 @@ impl FileStorage {
         }
 
         Ok(Self { data_dir })
+    }
+
+    pub fn get_notepath_as_pathbuf(note_path: &NotePath) -> PathBuf {
+        let full_path = note_path.get_full_path();
+        PathBuf::from(full_path)
     }
 }
 
@@ -144,14 +152,16 @@ impl StorageStrategy for FileStorage {
         let mut results = Vec::new();
 
         for note in notes {
-            results.push(match self.get_note_by_path(notebook, note)? {
-                Some(value) => value,
-                None => {
-                    return Err(StorageError::ListNotes(format!(
-                        "Note {note} should exist, but it doesnt."
-                    )));
-                }
-            });
+            results.push(
+                match self.get_note_by_path(notebook, &NoteFilename::new(note.clone()))? {
+                    Some(value) => value,
+                    None => {
+                        return Err(StorageError::ListNotes(format!(
+                            "Note {note} should exist, but it doesnt."
+                        )));
+                    }
+                },
+            );
         }
 
         Ok(results)
@@ -170,24 +180,24 @@ impl StorageStrategy for FileStorage {
         &self,
         notebook: &mut Notebook,
         title: String,
-        path: &str,
+        note_path: &NoteFilename,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        let mut note_path = PathBuf::from(notebook.get_path());
-        note_path.push(path);
+        let note_path = notebook.get_notepath(note_path.clone());
+        let note_path_buf = FileStorage::get_notepath_as_pathbuf(&note_path.clone());
 
-        std::fs::write(&note_path, [])
+        std::fs::write(&note_path_buf, [])
             .map_err(|e| StorageError::CreateNote(format!("Failed to create note: {e}")))?;
 
         let note_meta = NoteMetaInformation::new(title);
 
-        self.save_note_meta(&note_path.to_string_lossy(), &note_meta)?;
+        self.save_note_meta(&note_path, &note_meta)?;
 
-        notebook.get_meta_mut().add_note(path.to_string());
+        notebook.get_meta_mut().add_note(note_path.get_filename());
 
         let meta = notebook.get_meta();
-        let path = notebook.get_path();
+        let notebook_path = notebook.get_path();
 
-        self.save_notebook_meta(path, meta)?;
+        self.save_notebook_meta(notebook_path, meta)?;
 
         Ok(())
     }
@@ -195,25 +205,21 @@ impl StorageStrategy for FileStorage {
     fn delete_note(
         &self,
         notebook: &mut Notebook,
-        note_path: &str,
+        note_path: &NoteFilename,
     ) -> Result<(), crate::core::storage_strategy::StorageError> {
-        let mut path = PathBuf::from(notebook.get_path());
-        path.push(note_path);
+        let note_path = notebook.get_notepath(note_path.clone());
+        let path = FileStorage::get_notepath_as_pathbuf(&note_path);
 
-        let note_path = path;
-
-        std::fs::remove_file(&note_path)
+        std::fs::remove_file(&path)
             .map_err(|e| StorageError::DeleteNote(format!("Failed to delete note: {e}")))?;
 
-        std::fs::remove_file(FileStorage::note_metadata_path(&note_path))
+        std::fs::remove_file(FileStorage::note_metadata_path(&path))
             .map_err(|e| StorageError::DeleteNote(format!("Failed to delete metadata: {e}")))?;
 
-        if !notebook.get_meta_mut().remove_note(
-            &note_path
-                .file_name()
-                .expect("to have a filename")
-                .to_string_lossy(),
-        ) {
+        if !notebook
+            .get_meta_mut()
+            .remove_note(note_path.get_filename())
+        {
             return Err(StorageError::DeleteNote(format!(
                 "Path {note_path:?} didn't get removed from metadata"
             )));
@@ -236,28 +242,29 @@ impl StorageStrategy for FileStorage {
     fn get_note_by_path<'a>(
         &self,
         notebook: &'a Notebook,
-        note_path: &str,
+        note_path: &NoteFilename,
     ) -> Result<Option<Note<'a>>, StorageError> {
-        let mut maybe_path = PathBuf::from(notebook.get_path());
-        maybe_path.push(note_path);
+        let note_path = notebook.get_notepath(note_path.clone());
+
+        let maybe_path = FileStorage::get_notepath_as_pathbuf(&note_path);
 
         if !maybe_path.exists() {
             return Ok(None);
         }
 
-        let meta = self.read_note_meta(&maybe_path.to_string_lossy())?;
-        let note = Note::new(maybe_path.to_str().unwrap().to_string(), notebook, meta);
+        let meta = self.read_note_meta(&note_path)?;
+
+        let note = Note::new(note_path, notebook, meta);
 
         Ok(Some(note))
     }
 
     fn save_note_meta<'a>(
         &self,
-        note_path: &str,
+        note_path: &NotePath,
         meta: &crate::core::models::note_meta::NoteMetaInformation,
     ) -> Result<(), StorageError> {
-        let note_path_buf = PathBuf::from(note_path);
-        let path = Self::note_metadata_path(&note_path_buf);
+        let path = Self::note_metadata_path(&Self::get_notepath_as_pathbuf(note_path));
 
         let json = serde_json::to_string_pretty(&meta).map_err(|e| {
             StorageError::SaveNoteMeta(format!("Failed to serialize metadata: {e}"))
@@ -271,10 +278,9 @@ impl StorageStrategy for FileStorage {
 
     fn read_note_meta<'a>(
         &self,
-        note_path: &str,
+        note_path: &NotePath,
     ) -> Result<crate::core::models::note_meta::NoteMetaInformation, StorageError> {
-        let note_path_buf = PathBuf::from(note_path);
-        let path = Self::note_metadata_path(&note_path_buf);
+        let path = Self::note_metadata_path(&Self::get_notepath_as_pathbuf(note_path));
 
         let content = std::fs::read_to_string(path)
             .map_err(|e| StorageError::ReadNoteMeta(format!("Failed to read metadata: {e}")))?;
@@ -322,9 +328,12 @@ impl StorageStrategy for FileStorage {
         Ok(meta)
     }
 
-    fn get_path_on_fs<'a>(&self, notebook: &Notebook, path: &str) -> Result<PathBuf, StorageError> {
-        let mut book_path = PathBuf::from(notebook.get_path());
-        book_path.push(path);
+    fn get_path_on_fs<'a>(
+        &self,
+        notebook: &Notebook,
+        path: &NoteFilename,
+    ) -> Result<PathBuf, StorageError> {
+        let book_path = FileStorage::get_notepath_as_pathbuf(&notebook.get_notepath(path.clone()));
 
         if !book_path.exists() {
             return Err(StorageError::PathOnFs(format!(
@@ -335,7 +344,7 @@ impl StorageStrategy for FileStorage {
         Ok(book_path)
     }
 
-    fn list_files(&self, notebook: &Notebook) -> Result<Vec<String>, StorageError> {
+    fn list_files(&self, notebook: &Notebook) -> Result<Vec<NoteFilename>, StorageError> {
         let mut files = Vec::new();
 
         let dir = std::fs::read_dir(notebook.get_path())
@@ -350,7 +359,9 @@ impl StorageStrategy for FileStorage {
                 .map_err(|e| StorageError::ListFiles(format!("Failed to get file type: {e}")))?
                 .is_file()
             {
-                files.push(entry.file_name().to_string_lossy().to_string());
+                files.push(NoteFilename::new(
+                    entry.file_name().to_string_lossy().to_string(),
+                ));
             }
         }
 
@@ -360,17 +371,16 @@ impl StorageStrategy for FileStorage {
     fn rename_note_title(
         &self,
         notebook: &mut Notebook,
-        note_path: &str,
+        note_path: &NoteFilename,
         new_title: &str,
     ) -> Result<(), StorageError> {
-        let mut path = PathBuf::from(notebook.get_path());
-        path.push(note_path);
+        let path = notebook.get_notepath(note_path.clone());
 
-        let mut note_meta = self.read_note_meta(&path.to_string_lossy())?;
+        let mut note_meta = self.read_note_meta(&path)?;
 
         note_meta.title = new_title.to_string();
 
-        self.save_note_meta(&path.to_string_lossy(), &note_meta)?;
+        self.save_note_meta(&path, &note_meta)?;
 
         Ok(())
     }
@@ -383,7 +393,7 @@ impl StorageStrategy for FileStorage {
     }
 
     fn get_note_metadata_file(&self, note: &Note) -> Result<PathBuf, StorageError> {
-        let path = FileStorage::note_metadata_path(&PathBuf::from(note.get_path()));
+        let path = FileStorage::note_metadata_path(&PathBuf::from(note.get_path().get_full_path()));
 
         Ok(path)
     }

@@ -167,7 +167,7 @@ impl SyncStrategy for GitSync {
 
         let commit_msg = files.iter().join(", ");
 
-        files.push(&note_name);
+        files.push(note_name);
         files.push(&note_meta_file_path);
 
         if matches!(kind, SyncKind::Create) {
@@ -256,7 +256,7 @@ impl SyncStrategy for GitSync {
                 .list_notes(notebook)
                 .map_err(|e| SyncError::Sync(format!("Failed to list files: {e}")))?
             {
-                vec.push(note.get_file_name());
+                vec.push(note.get_file_name().to_string());
 
                 vec.push(
                     storage
