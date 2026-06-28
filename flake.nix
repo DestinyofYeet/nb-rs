@@ -67,6 +67,10 @@
         packages.default = pkgs.callPackage ./pkg.nix { inherit self; };
 
         formatter = treeFmtEval.config.build.wrapper;
+
+        checks = {
+          formatting = treeFmtEval.config.build.check self;
+        };
       }
     );
 }
