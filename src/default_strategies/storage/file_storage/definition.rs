@@ -20,7 +20,7 @@ pub struct FileStorage {
 impl FileStorage {
     pub(super) const BOOK_METADATA_PATH: &str = ".notebook_meta.json";
 
-    fn note_metadata_path(path: &Path) -> PathBuf {
+    pub(super) fn note_metadata_path(path: &Path) -> PathBuf {
         let file_name = path.file_name().map(|e| e.to_str().unwrap()).unwrap();
 
         path.with_file_name(format!("{file_name}_meta.json"))
