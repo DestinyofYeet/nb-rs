@@ -1,7 +1,7 @@
 use crate::core::{
     Nb, NbError,
     models::{note::Note, notebook::Notebook},
-    storage_strategy::{SearchNoteBy, StorageError, StorageStrategy},
+    storage_strategy::SearchNoteBy,
 };
 
 impl Nb {
