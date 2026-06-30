@@ -8,7 +8,7 @@ use crate::core::{
         notebook::Notebook,
         notebook_meta::NotebookMetaInformation,
     },
-    storage_strategy::StorageError,
+    storage_strategy::{SearchNoteBy, StorageError},
 };
 
 pub trait StorageStrategy {
@@ -55,7 +55,8 @@ pub trait StorageStrategy {
     fn search_notes<'a>(
         &self,
         notebook: &'a Notebook,
-        search_term: String,
+        search_by: &SearchNoteBy,
+        tags: &[String],
     ) -> Result<Vec<Note<'a>>, StorageError>;
 
     /// This function gets a note in a notebook

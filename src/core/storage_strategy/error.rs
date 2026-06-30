@@ -55,4 +55,7 @@ pub enum StorageError {
 
     #[error("Failed to list files: {0}")]
     ListFiles(String),
+
+    #[error("Failed to search files: {0}")]
+    Search(String),
 }

@@ -3,7 +3,10 @@ use colored::Colorize;
 use inquire::{Confirm, CustomType};
 use itertools::Itertools;
 use nb_rs::{
-    core::{Nb, models::note_path::NoteFilename, sync_strategy::SyncStrategy},
+    core::{
+        Nb, models::note_path::NoteFilename, storage_strategy::SearchNoteBy,
+        sync_strategy::SyncStrategy,
+    },
     default_strategies::{
         storage::file_storage::FileStorage,
         sync::{
@@ -204,11 +207,7 @@ pub fn main() -> anyhow::Result<()> {
                             notebook.get_name().blue(),
                             notes
                                 .iter()
-                                .map(|note| format!(
-                                    "- {} {}",
-                                    note.get_title().blue(),
-                                    format!("({})", note.get_file_name()).white()
-                                ))
+                                .map(|note| format!("- {}", Nb::format_note(note)))
                                 .join("\n")
                         );
                     }
@@ -559,6 +558,51 @@ pub fn main() -> anyhow::Result<()> {
                     nb.save_note(&note, config.sync)?;
                 }
             }
+        }
+        ActionArgs::Search {
+            notebook,
+            title,
+            filename,
+            tags,
+        } => {
+            let notebook = match nb.get_notebook(&notebook)? {
+                Some(value) => value,
+                None => {
+                    return Err(anyhow::format_err!(
+                        "Failed to find a notebook with name {}",
+                        notebook.blue()
+                    ));
+                }
+            };
+
+            let search = match (title, filename) {
+                (None, None) => SearchNoteBy::All,
+                (None, Some(filename)) => SearchNoteBy::Filename(filename),
+                (Some(title), None) => SearchNoteBy::Title(title),
+                (Some(_), Some(_)) => {
+                    return Err(anyhow::format_err!(
+                        "Need either a title or a filename. Provided both."
+                    ));
+                }
+            };
+
+            let files = nb.search_notes(&notebook, &search, &tags)?;
+
+            println!(
+                "Found the following notes matching {}{}:\n{}",
+                search.to_string().blue(),
+                {
+                    if !tags.is_empty() {
+                        format!(" and by tags {}", tags.iter().map(|e| e.blue()).join(", "))
+                    } else {
+                        "".to_string()
+                    }
+                },
+                files
+                    .iter()
+                    .map(|note| format!("- {}", Nb::format_note(note)))
+                    .join("\n")
+            )
         }
     }
 

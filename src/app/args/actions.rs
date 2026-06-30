@@ -27,6 +27,7 @@ pub enum ActionArgs {
         #[arg(help = "The notebook to list all notes in")]
         notebook: Option<String>,
     },
+
     #[command(about = "Delete a note or notebook", visible_aliases=["del", "rm"])]
     Delete {
         #[arg(help = "The notebook containing the note")]
@@ -52,5 +53,20 @@ pub enum ActionArgs {
 
         #[command(subcommand)]
         action: ModifyArgs,
+    },
+
+    #[command(about = "Search a note in a notebook")]
+    Search {
+        #[arg(help = "The notebook to search in")]
+        notebook: String,
+
+        #[arg(long, help = "The title of the note", group = "name")]
+        title: Option<String>,
+
+        #[arg(long, help = "The filename of the note", group = "name")]
+        filename: Option<String>,
+
+        #[arg(long, short, help = "Tags to filter", num_args = 1.., )]
+        tags: Vec<String>,
     },
 }

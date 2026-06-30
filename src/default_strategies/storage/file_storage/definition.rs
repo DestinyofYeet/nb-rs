@@ -10,7 +10,7 @@ use crate::core::{
         notebook::Notebook,
         notebook_meta::NotebookMetaInformation,
     },
-    storage_strategy::{StorageError, StorageStrategy},
+    storage_strategy::{SearchNoteBy, StorageError, StorageStrategy},
 };
 
 pub struct FileStorage {
@@ -165,15 +165,6 @@ impl StorageStrategy for FileStorage {
         }
 
         Ok(results)
-    }
-
-    fn search_notes<'a>(
-        &self,
-        notebook: &'a crate::core::models::notebook::Notebook,
-        search_term: String,
-    ) -> Result<Vec<crate::core::models::note::Note<'a>>, crate::core::storage_strategy::StorageError>
-    {
-        todo!()
     }
 
     fn create_note(
@@ -396,5 +387,60 @@ impl StorageStrategy for FileStorage {
         let path = FileStorage::note_metadata_path(&PathBuf::from(note.get_path().get_full_path()));
 
         Ok(path)
+    }
+
+    fn search_notes<'a>(
+        &self,
+        notebook: &'a Notebook,
+        search_by: &crate::core::storage_strategy::SearchNoteBy,
+        tags: &[String],
+    ) -> Result<Vec<Note<'a>>, StorageError> {
+        let mut files = self.list_notes(notebook)?;
+
+        let mut result: Vec<Note<'a>> = Vec::new();
+
+        match search_by {
+            SearchNoteBy::Title(title) => {
+                for file in files.into_iter() {
+                    if file
+                        .get_title()
+                        .to_lowercase()
+                        .contains(&title.to_lowercase())
+                    {
+                        result.push(file);
+                    }
+                }
+            }
+
+            SearchNoteBy::Filename(filename) => {
+                for file in files.into_iter() {
+                    if file
+                        .get_file_name()
+                        .to_lowercase()
+                        .contains(&filename.to_lowercase())
+                    {
+                        result.push(file);
+                    }
+                }
+            }
+            SearchNoteBy::All => {
+                result.append(&mut files);
+            }
+        }
+
+        if !tags.is_empty() {
+            result.retain(|note| {
+                let mut keep = false;
+                for tag in tags.iter() {
+                    if note.get_metadata().tags.contains(tag) {
+                        keep = true;
+                    }
+                }
+
+                keep
+            });
+        }
+
+        Ok(result)
     }
 }
