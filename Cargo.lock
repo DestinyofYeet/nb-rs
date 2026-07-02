@@ -477,9 +477,9 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "roxygen"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa650dd372f29f0a6be64b2896707f9536962ba28915e3b39bcafd5a6221873b"
+checksum = "b11e62528dc14c3ea67395458ebb97072fba454c99106da93e1e096152e9104b"
 dependencies = [
  "proc-macro2",
  "quote",
