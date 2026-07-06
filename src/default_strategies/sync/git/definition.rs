@@ -8,6 +8,7 @@ use tracing::debug;
 
 use crate::{
     core::{
+        models::notebook::Notebook,
         storage_strategy::StorageStrategy,
         sync_strategy::{SyncError, SyncStrategy, meta::SyncMetaInformation, sync_kind::SyncKind},
     },
@@ -74,13 +75,60 @@ impl GitSync {
 
         Ok(())
     }
+
+    fn collect_all_files_in_notebook(
+        &self,
+        notebook: &Notebook,
+        storage: &dyn StorageStrategy,
+    ) -> Result<Vec<String>, SyncError> {
+        let files: Vec<String> = {
+            let mut vec = Vec::new();
+
+            for note in storage
+                .list_notes(notebook)
+                .map_err(|e| SyncError::Sync(format!("Failed to list files: {e}")))?
+            {
+                vec.push(note.get_file_name().to_string());
+
+                vec.push(
+                    storage
+                        .get_note_metadata_file(&note)
+                        .map_err(|e| SyncError::Sync(format!("Failed to get note metadata: {e}")))?
+                        .file_name()
+                        .expect("to have filename")
+                        .to_string_lossy()
+                        .to_string(),
+                );
+
+                for attachment in &note.get_metadata().attachments {
+                    vec.push(attachment.get_path().to_string());
+                }
+            }
+
+            let notebook_meta = storage
+                .get_notebook_metadata_file(notebook)
+                .map_err(|e| SyncError::Sync(format!("Failed to get notebook meta: {e}")))?;
+
+            vec.push(
+                notebook_meta
+                    .file_name()
+                    .expect("to get filename")
+                    .to_string_lossy()
+                    .to_string(),
+            );
+
+            vec
+        };
+
+        Ok(files)
+    }
 }
 
 impl SyncStrategy for GitSync {
     fn setup_sync(
         &self,
         notebook: &crate::core::models::notebook::Notebook,
-        _storage: &dyn StorageStrategy,
+        storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         let path = notebook.get_path();
         self.run_git_command(GitCommand::new(
@@ -97,7 +145,20 @@ impl SyncStrategy for GitSync {
             &["switch", "-c", &self.meta.branch],
         ))?;
 
-        self.run_git_command(GitCommand::new(path.into(), &["add", "-A"]))?;
+        let args = {
+            let mut vec: Vec<String> = Vec::new();
+            let mut files = self.collect_all_files_in_notebook(notebook, storage)?;
+            vec.push("add".to_string());
+            vec.append(&mut files);
+
+            vec
+        };
+
+        self.run_git_command(GitCommand::new(
+            path.into(),
+            &args.iter().map(|e| e.as_str()).collect_vec(),
+        ))?;
+
         self.run_git_command(
             GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Init"]).set_failable(true),
         )?;
@@ -249,44 +310,7 @@ impl SyncStrategy for GitSync {
     ) -> Result<(), SyncError> {
         let path = notebook.get_path();
 
-        let files: Vec<String> = {
-            let mut vec = Vec::new();
-
-            for note in storage
-                .list_notes(notebook)
-                .map_err(|e| SyncError::Sync(format!("Failed to list files: {e}")))?
-            {
-                vec.push(note.get_file_name().to_string());
-
-                vec.push(
-                    storage
-                        .get_note_metadata_file(&note)
-                        .map_err(|e| SyncError::Sync(format!("Failed to get note metadata: {e}")))?
-                        .file_name()
-                        .expect("to have filename")
-                        .to_string_lossy()
-                        .to_string(),
-                );
-
-                for attachment in &note.get_metadata().attachments {
-                    vec.push(attachment.get_path().to_string());
-                }
-            }
-
-            let notebook_meta = storage
-                .get_notebook_metadata_file(notebook)
-                .map_err(|e| SyncError::Sync(format!("Failed to get notebook meta: {e}")))?;
-
-            vec.push(
-                notebook_meta
-                    .file_name()
-                    .expect("to get filename")
-                    .to_string_lossy()
-                    .to_string(),
-            );
-
-            vec
-        };
+        let files = self.collect_all_files_in_notebook(notebook, storage)?;
 
         let args = {
             let mut vec = Vec::new();
