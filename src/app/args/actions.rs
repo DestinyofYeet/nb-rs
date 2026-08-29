@@ -66,6 +66,9 @@ pub enum ActionArgs {
         #[arg(long, help = "The filename of the note", group = "name")]
         filename: Option<String>,
 
+        #[arg(long, help = "The content of the note", num_args = 1..,)]
+        content: Vec<String>,
+
         #[arg(long, short, help = "Tags to filter", num_args = 1.., )]
         tags: Vec<String>,
     },

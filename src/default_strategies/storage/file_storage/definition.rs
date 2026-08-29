@@ -392,53 +392,69 @@ impl StorageStrategy for FileStorage {
     fn search_notes<'a>(
         &self,
         notebook: &'a Notebook,
-        search_by: &crate::core::storage_strategy::SearchNoteBy,
-        tags: &[String],
+        search_by: &[SearchNoteBy],
     ) -> Result<Vec<Note<'a>>, StorageError> {
-        let mut files = self.list_notes(notebook)?;
+        let files = self.list_notes(notebook)?;
 
         let mut result: Vec<Note<'a>> = Vec::new();
 
-        match search_by {
-            SearchNoteBy::Title(title) => {
-                for file in files.into_iter() {
-                    if file
-                        .get_title()
-                        .to_lowercase()
-                        .contains(&title.to_lowercase())
-                    {
-                        result.push(file);
+        for file in files.into_iter() {
+            let mut keep = false;
+            for search in search_by.iter() {
+                match search {
+                    SearchNoteBy::Title(title) => {
+                        keep = file
+                            .get_title()
+                            .to_lowercase()
+                            .contains(&title.to_lowercase());
                     }
+                    SearchNoteBy::Filename(filename) => {
+                        keep = file
+                            .get_file_name()
+                            .to_lowercase()
+                            .contains(&filename.to_lowercase());
+                    }
+                    SearchNoteBy::Content(content) => {
+                        let file_content = std::fs::read_to_string(
+                            self.get_path_on_fs(notebook, file.get_path().get_filename())?,
+                        )
+                        .map_err(|e| {
+                            StorageError::Search(format!(
+                                "Failed to read note '{}': {e}",
+                                file.get_path().get_filename().get_filename()
+                            ))
+                        })?;
+
+                        let mut all_matches = true;
+
+                        for item in content {
+                            if !file_content.to_lowercase().contains(&item.to_lowercase()) {
+                                all_matches = false;
+                            }
+                        }
+
+                        keep = all_matches;
+                    }
+                    SearchNoteBy::Tags(tags) => {
+                        let mut all_matches = true;
+                        for tag in tags {
+                            if !file.get_metadata().tags.contains(tag) {
+                                all_matches = false;
+                            }
+                        }
+
+                        keep = all_matches;
+                    }
+                }
+
+                if !keep {
+                    break;
                 }
             }
 
-            SearchNoteBy::Filename(filename) => {
-                for file in files.into_iter() {
-                    if file
-                        .get_file_name()
-                        .to_lowercase()
-                        .contains(&filename.to_lowercase())
-                    {
-                        result.push(file);
-                    }
-                }
+            if keep {
+                result.push(file);
             }
-            SearchNoteBy::All => {
-                result.append(&mut files);
-            }
-        }
-
-        if !tags.is_empty() {
-            result.retain(|note| {
-                let mut keep = false;
-                for tag in tags.iter() {
-                    if note.get_metadata().tags.contains(tag) {
-                        keep = true;
-                    }
-                }
-
-                keep
-            });
         }
 
         Ok(result)

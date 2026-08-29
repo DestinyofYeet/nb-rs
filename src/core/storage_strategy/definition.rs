@@ -68,8 +68,7 @@ pub trait StorageStrategy {
         /// The notebook to search in
         notebook: &'a Notebook,
         /// Search criteria
-        search_by: &SearchNoteBy,
-        tags: &[String],
+        search_by: &[SearchNoteBy],
     ) -> Result<Vec<Note<'a>>, StorageError>;
 
     /// Get a note in a notebook

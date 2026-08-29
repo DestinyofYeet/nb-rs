@@ -8,9 +8,8 @@ impl Nb {
     pub fn search_notes<'a>(
         &self,
         notebook: &'a Notebook,
-        search_by: &SearchNoteBy,
-        tags: &[String],
+        search_by: &[SearchNoteBy],
     ) -> Result<Vec<Note<'a>>, NbError> {
-        Ok(self.storage.search_notes(notebook, search_by, tags)?)
+        Ok(self.storage.search_notes(notebook, search_by)?)
     }
 }

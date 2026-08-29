@@ -564,6 +564,7 @@ pub fn main() -> anyhow::Result<()> {
             title,
             filename,
             tags,
+            content,
         } => {
             let notebook = match nb.get_notebook(&notebook)? {
                 Some(value) => value,
@@ -575,29 +576,36 @@ pub fn main() -> anyhow::Result<()> {
                 }
             };
 
-            let search = match (title, filename) {
-                (None, None) => SearchNoteBy::All,
-                (None, Some(filename)) => SearchNoteBy::Filename(filename),
-                (Some(title), None) => SearchNoteBy::Title(title),
-                (Some(_), Some(_)) => {
-                    return Err(anyhow::format_err!(
-                        "Need either a title or a filename. Provided both."
-                    ));
-                }
-            };
+            let mut search = Vec::new();
 
-            let files = nb.search_notes(&notebook, &search, &tags)?;
+            if let Some(filename) = filename {
+                search.push(SearchNoteBy::Filename(filename));
+            }
+
+            if let Some(title) = title {
+                search.push(SearchNoteBy::Title(title));
+            }
+
+            if !tags.is_empty() {
+                search.push(SearchNoteBy::Tags(tags));
+            }
+
+            if !content.is_empty() {
+                search.push(SearchNoteBy::Content(content));
+            }
+
+            let files = nb.search_notes(&notebook, &search)?;
+
+            let search_criteria_string =
+                search.iter().map(|search| search.to_string()).join(" and ");
+
+            if files.is_empty() {
+                println!("No notes found matching {search_criteria_string}");
+                return Ok(());
+            }
 
             println!(
-                "Found the following notes matching {}{}:\n{}",
-                search.to_string().blue(),
-                {
-                    if !tags.is_empty() {
-                        format!(" and by tags {}", tags.iter().map(|e| e.blue()).join(", "))
-                    } else {
-                        "".to_string()
-                    }
-                },
+                "Found the following notes matching {search_criteria_string}:\n{}",
                 files
                     .iter()
                     .map(|note| format!("- {}", Nb::format_note(note)))
