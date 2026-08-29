@@ -64,7 +64,7 @@
           # PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
         };
 
-        packages.default = pkgs.callPackage ./pkg.nix { inherit self; };
+        packages.default = pkgs.callPackage ./pkg.nix { inherit self toml; };
 
         formatter = treeFmtEval.config.build.wrapper;
 

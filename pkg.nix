@@ -3,6 +3,7 @@
   lib,
   self,
   pkgs,
+  toml,
   ...
 }:
 let
@@ -10,14 +11,14 @@ let
 
 in
 rustPlatform.buildRustPackage {
-  pname = "nb-rs";
-  version = "1.0";
+  pname = toml.package.name;
+  version = toml.package.version;
 
   nativeBuildInputs = with pkgs; [ git ];
 
   src = ./.;
 
-  cargoHash = "sha256-R33GX+dYv4sxC7yN49P9PX1I8OcFi8UMPUz+PR5zUBI=";
+  cargoHash = "sha256-hIeNS4IKdRpZhHj6OGEcZIo2wE35m23lCbxU10yc/qw=";
 
   GIT_REV = version;
 
