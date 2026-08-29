@@ -4,8 +4,6 @@ use crate::core::{
     sync_strategy::sync_kind::SyncKind,
 };
 
-use colored::Colorize;
-use itertools::Itertools;
 use roxygen::roxygen;
 
 impl Nb {
@@ -140,19 +138,5 @@ impl Nb {
         }
 
         Ok(())
-    }
-
-    pub fn format_note(note: &Note) -> String {
-        let tags = note.get_metadata().get_tags();
-        format!(
-            "{}{} {}",
-            note.get_title().blue(),
-            if !tags.is_empty() {
-                format!(" [{}]", tags.iter().map(|e| e.purple()).join(", "))
-            } else {
-                "".to_string()
-            },
-            format!("({})", note.get_file_name()).white(),
-        )
     }
 }

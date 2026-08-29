@@ -11,7 +11,7 @@ impl NoteMetaInformation {
         }
     }
 
-    pub fn get_tags(&self) -> &Vec<String> {
+    pub fn get_tags(&self) -> &[String] {
         &self.tags
     }
 

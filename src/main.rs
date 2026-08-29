@@ -205,10 +205,7 @@ pub fn main() -> anyhow::Result<()> {
                         println!(
                             "Following notes are in the notebook {}:\n{}",
                             notebook.get_name().blue(),
-                            notes
-                                .iter()
-                                .map(|note| format!("- {}", Nb::format_note(note)))
-                                .join("\n")
+                            notes.iter().map(|note| format!("- {note}")).join("\n")
                         );
                     }
                 }
@@ -485,7 +482,7 @@ pub fn main() -> anyhow::Result<()> {
                             return Err(anyhow::format_err!("A note has to be provided!"));
                         }
                     };
-                    let mut tags: Vec<String> = note.get_metadata().get_tags().clone();
+                    let mut tags: Vec<String> = note.get_metadata().get_tags().to_vec();
 
                     {
                         let mut new_tags: Vec<String> = Vec::new();
@@ -606,10 +603,7 @@ pub fn main() -> anyhow::Result<()> {
 
             println!(
                 "Found the following notes matching {search_criteria_string}:\n{}",
-                files
-                    .iter()
-                    .map(|note| format!("- {}", Nb::format_note(note)))
-                    .join("\n")
+                files.iter().map(|note| format!("- {note}")).join("\n")
             )
         }
     }
