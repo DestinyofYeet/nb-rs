@@ -145,8 +145,7 @@ impl StorageStrategy for FileStorage {
     fn list_notes<'a>(
         &self,
         notebook: &'a crate::core::models::notebook::Notebook,
-    ) -> Result<Vec<crate::core::models::note::Note<'a>>, crate::core::storage_strategy::StorageError>
-    {
+    ) -> Result<Vec<Note<'a>>, StorageError> {
         let notes = notebook.get_meta().get_notes();
 
         let mut results = Vec::new();

@@ -307,6 +307,8 @@ impl SyncStrategy for GitSync {
 
         let files = self.collect_all_files_in_notebook(notebook, storage)?;
 
+        debug!("files: {files:?}");
+
         let args = {
             let mut vec = Vec::new();
             vec.push("add");

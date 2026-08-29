@@ -97,7 +97,11 @@ impl Nb {
         self.storage
             .save_notebook_meta(notebook.get_path(), &book_meta)?;
 
-        sync.sync_full(notebook, &*self.storage, Some("Sync import".into()))?;
+        let notebook = self
+            .get_notebook(notebook.get_name())?
+            .expect("notebook to exist");
+
+        sync.sync_full(&notebook, &*self.storage, Some("Sync import".into()))?;
 
         Ok(())
     }
