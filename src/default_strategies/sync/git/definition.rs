@@ -26,10 +26,10 @@ struct GitCommand<'a> {
 }
 
 impl<'a> GitCommand<'a> {
-    pub fn new(cwd: Option<&'a str>, args: &'a [&'a str]) -> Self {
+    pub fn new(cwd: impl Into<Option<&'a str>>, args: &'a [&'a str]) -> Self {
         Self {
             can_fail: false,
-            cwd,
+            cwd: cwd.into(),
             args,
         }
     }
@@ -131,19 +131,13 @@ impl SyncStrategy for GitSync {
         storage: &dyn StorageStrategy,
     ) -> Result<SyncMetaInformation, crate::core::sync_strategy::SyncError> {
         let path = notebook.get_path();
+        self.run_git_command(GitCommand::new(path, &["init", "-b", &self.meta.branch]))?;
         self.run_git_command(GitCommand::new(
-            path.into(),
-            &["init", "-b", &self.meta.branch],
-        ))?;
-        self.run_git_command(GitCommand::new(
-            path.into(),
+            path,
             &["remote", "add", "origin", &self.meta.repo_url],
         ))?;
 
-        self.run_git_command(GitCommand::new(
-            path.into(),
-            &["switch", "-c", &self.meta.branch],
-        ))?;
+        self.run_git_command(GitCommand::new(path, &["switch", "-c", &self.meta.branch]))?;
 
         let args = {
             let mut vec: Vec<String> = Vec::new();
@@ -155,17 +149,17 @@ impl SyncStrategy for GitSync {
         };
 
         self.run_git_command(GitCommand::new(
-            path.into(),
+            path,
             &args.iter().map(|e| e.as_str()).collect_vec(),
         ))?;
 
         self.run_git_command(
-            GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Init"]).set_failable(true),
+            GitCommand::new(path, &["commit", "-m", "[nb-rs] Init"]).set_failable(true),
         )?;
 
         // maybe can fail
         self.run_git_command(GitCommand::new(
-            path.into(),
+            path,
             &["push", "--set-upstream", "origin", &self.meta.branch],
         ))?;
 
@@ -251,7 +245,7 @@ impl SyncStrategy for GitSync {
                     vec
                 };
 
-                self.run_git_command(GitCommand::new(notebook_path.into(), &args))?;
+                self.run_git_command(GitCommand::new(notebook_path, &args))?;
             }
 
             SyncKind::Delete => {
@@ -264,13 +258,13 @@ impl SyncStrategy for GitSync {
                     vec
                 };
 
-                self.run_git_command(GitCommand::new(notebook_path.into(), &args))?;
+                self.run_git_command(GitCommand::new(notebook_path, &args))?;
             }
         }
 
         self.run_git_command(
             GitCommand::new(
-                notebook_path.into(),
+                notebook_path,
                 &[
                     "commit",
                     "-m",
@@ -284,7 +278,7 @@ impl SyncStrategy for GitSync {
             )
             .set_failable(true),
         )?;
-        self.run_git_command(GitCommand::new(notebook_path.into(), &["push"]))?;
+        self.run_git_command(GitCommand::new(notebook_path, &["push"]))?;
 
         Ok(())
     }
@@ -307,6 +301,7 @@ impl SyncStrategy for GitSync {
         &self,
         notebook: &crate::core::models::notebook::Notebook,
         storage: &dyn StorageStrategy,
+        hint: Option<String>,
     ) -> Result<(), SyncError> {
         let path = notebook.get_path();
 
@@ -323,12 +318,12 @@ impl SyncStrategy for GitSync {
             vec
         };
 
-        self.run_git_command(GitCommand::new(path.into(), &["pull"]))?;
-        self.run_git_command(GitCommand::new(path.into(), &args))?;
-        self.run_git_command(
-            GitCommand::new(path.into(), &["commit", "-m", "[nb-rs] Full sync"]).set_failable(true),
-        )?;
-        self.run_git_command(GitCommand::new(path.into(), &["push"]))?;
+        let msg = format!("[nb-rs] {}", hint.unwrap_or("Full sync".to_string()));
+
+        self.run_git_command(GitCommand::new(path, &["pull"]))?;
+        self.run_git_command(GitCommand::new(path, &args))?;
+        self.run_git_command(GitCommand::new(path, &["commit", "-m", &msg]).set_failable(true))?;
+        self.run_git_command(GitCommand::new(path, &["push"]))?;
 
         Ok(())
     }

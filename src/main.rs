@@ -355,7 +355,10 @@ pub fn main() -> anyhow::Result<()> {
 
                 SyncArgs::Import { kind } => {
                     if !notebook.get_meta().get_notes().is_empty() {
-                        println!("Notebook {} must be empty!", notebook.get_name());
+                        println!(
+                            "Notebook {} must not contain any notes!",
+                            notebook.get_name()
+                        );
                         return Ok(());
                     }
 

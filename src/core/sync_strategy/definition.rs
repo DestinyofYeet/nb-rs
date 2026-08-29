@@ -37,6 +37,7 @@ pub trait SyncStrategy {
         &self,
         notebook: &Notebook,
         storage: &dyn StorageStrategy,
+        hint: Option<String>,
     ) -> Result<(), SyncError>;
 
     /// Instanciate a Strategy from a metadata

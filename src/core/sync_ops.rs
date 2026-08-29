@@ -28,7 +28,7 @@ impl Nb {
             .get_sync_information()
             .get_strategy(&*self.storage)?;
 
-        meta.sync_full(notebook, &*self.storage)?;
+        meta.sync_full(notebook, &*self.storage, Some("Sync setup".to_string()))?;
 
         Ok(())
     }
@@ -60,7 +60,7 @@ impl Nb {
             .get_meta()
             .get_sync_information()
             .get_strategy(&*self.storage)?;
-        sync.sync_full(notebook, &*self.storage)?;
+        sync.sync_full(notebook, &*self.storage, Some("Manual sync".to_string()))?;
 
         Ok(())
     }
@@ -96,6 +96,8 @@ impl Nb {
 
         self.storage
             .save_notebook_meta(notebook.get_path(), &book_meta)?;
+
+        sync.sync_full(notebook, &*self.storage, Some("Sync import".into()))?;
 
         Ok(())
     }

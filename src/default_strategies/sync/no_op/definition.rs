@@ -52,6 +52,7 @@ impl SyncStrategy for NoopSync {
         &self,
         _notebook: &crate::core::models::notebook::Notebook,
         _storage: &dyn StorageStrategy,
+        _hint: Option<String>,
     ) -> Result<(), crate::core::sync_strategy::SyncError> {
         Ok(())
     }

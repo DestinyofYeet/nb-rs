@@ -109,7 +109,7 @@ impl Nb {
         self.storage.delete_note(notebook, note_path)?;
 
         if sync {
-            sync_strategy.sync_full(notebook, &*self.storage)?;
+            sync_strategy.sync_full(notebook, &*self.storage, None)?;
         }
 
         Ok(())
